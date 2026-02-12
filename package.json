@@ -1,0 +1,34 @@
+{
+  "name": "local-rag",
+  "version": "1.0.0",
+  "description": "Local RAG system using Ollama and ChromaDB",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/main.ts",
+    "dev": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/main.ts",
+    "setup-vector": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/vector.ts"
+  },
+  "keywords": [
+    "rag",
+    "ollama",
+    "chromadb",
+    "langchain",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "langchain": "^0.1.0",
+    "@langchain/community": "^0.0.40",
+    "@langchain/core": "^0.1.0",
+    "chromadb": "^1.8.0",
+    "csv-parse": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  }
+}
