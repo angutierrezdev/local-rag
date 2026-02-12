@@ -1,4 +1,4 @@
 {
   "template": "\nYou are an expert in answering questions about pizza restaurants.\n\nHere are some relevant reviews about pizza restaurants: {reviews}\n\nHere is a question about pizza restaurants: {question}\n\nTry to be helpful but concise in your answer.\n",
-  "question": "Enter your question about pizza restaurants (or q to quit): "
+  "question": "Enter your question about pizza restaurants"
 }

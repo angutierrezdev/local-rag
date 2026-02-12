@@ -67,16 +67,13 @@ async function main() {
   // Main interactive loop - keeps asking questions until user quits
   while (true) {
     console.log("---------------------------------------------------");
-    // Ensure "(or q to quit):" is always present
+    // Always append "(or q to quit): " to the question prompt
     let questionPrompt = promptsConfig.question || "Enter your question about pizza restaurants";
-    if (!questionPrompt.includes("(or q to quit)")) {
-      questionPrompt = questionPrompt.trim();
-      if (questionPrompt.endsWith(":")) {
-        questionPrompt = questionPrompt.slice(0, -1).trim() + " (or q to quit): ";
-      } else {
-        questionPrompt += " (or q to quit): ";
-      }
+    questionPrompt = questionPrompt.trim();
+    if (questionPrompt.endsWith(":")) {
+      questionPrompt = questionPrompt.slice(0, -1).trim();
     }
+    questionPrompt += " (or q to quit): ";
     const question = await rl.question(questionPrompt);
     console.log("---------------------------------------------------");
 
