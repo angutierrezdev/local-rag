@@ -103,8 +103,8 @@ Local-RAG/
 ├── realistic_restaurant_reviews.csv # Restaurant review dataset
 └── README.md                        # This file
 
-Note: Vector database data is stored in a Docker volume (chroma-data) when using docker-compose.
-If running Chroma with --path, data will be stored in chroma_langchain_db/ directory.
+Note: When using docker-compose (recommended), vector database data is stored in a Docker volume (chroma-data).
+The chroma_langchain_db/ directory is only created if you run Chroma locally with --path instead of Docker.
 ```
 
 ## Usage

@@ -12,10 +12,20 @@ import { getRetriever } from "./vector";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables or use defaults
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2";
+// Load environment variables - exit if required vars are missing
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const PROMPTS_CONFIG_PATH = process.env.PROMPTS_CONFIG_PATH || "prompts/default.json";
+
+if (!OLLAMA_BASE_URL) {
+  console.error("Error: OLLAMA_BASE_URL environment variable is required");
+  process.exit(1);
+}
+
+if (!OLLAMA_MODEL) {
+  console.error("Error: OLLAMA_MODEL environment variable is required");
+  process.exit(1);
+}
 
 // Load prompts configuration from external JSON file
 const promptsConfigPath = path.join(__dirname, "..", PROMPTS_CONFIG_PATH);
@@ -57,9 +67,17 @@ async function main() {
   // Main interactive loop - keeps asking questions until user quits
   while (true) {
     console.log("---------------------------------------------------");
-    const question = await rl.question(
-      promptsConfig.question || "Enter your question about pizza restaurants (or q to quit): "
-    );
+    // Ensure "(or q to quit):" is always present
+    let questionPrompt = promptsConfig.question || "Enter your question about pizza restaurants";
+    if (!questionPrompt.includes("(or q to quit)")) {
+      questionPrompt = questionPrompt.trim();
+      if (questionPrompt.endsWith(":")) {
+        questionPrompt = questionPrompt.slice(0, -1).trim() + " (or q to quit): ";
+      } else {
+        questionPrompt += " (or q to quit): ";
+      }
+    }
+    const question = await rl.question(questionPrompt);
     console.log("---------------------------------------------------");
 
     // Check if user wants to quit
