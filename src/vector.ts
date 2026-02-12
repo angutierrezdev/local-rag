@@ -99,7 +99,6 @@ export async function getRetriever(csvFilePath?: string) {
     : path.join(__dirname, "..", DEFAULT_CSV_PATH);
   
   console.log(`Loading reviews from: ${csvPath}`);
-  console.log(`Loading reviews from: ${csvPath}`);
   const csvContent = readFileSync(csvPath, "utf-8");
 
   // Parse CSV data
