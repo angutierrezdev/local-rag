@@ -1,7 +1,7 @@
 services:
   # ChromaDB vector database
   chroma:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.5.4
     container_name: chroma-db
     ports:
       - "8000:8000"
@@ -10,8 +10,10 @@ services:
     environment:
       - CHROMA_DB_IMPL=duckdb
       - ALLOW_RESET=true
+      - CHROMA_SERVER_HOST=${CHROMA_SERVER_HOST:-0.0.0.0}
+      - CHROMA_SERVER_HTTP_PORT=${CHROMA_SERVER_HTTP_PORT:-8000}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD", "curl", "-f", "${CHROMA_HEALTHCHECK_URL}"]
       interval: 5s
       timeout: 3s
       retries: 5
