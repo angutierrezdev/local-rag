@@ -56,8 +56,14 @@ This approach allows AI models to answer questions based on specific data (your 
    ```
 
 3. **Start ChromaDB server** (in a separate terminal):
+   Using Docker Compose (recommended):
    ```bash
-   docker run -p 8000:8000 chromadb/chroma
+   docker compose up
+   ```
+   
+   Or using plain Docker:
+   ```bash
+   docker run -p 8000:8000 chromadb/chroma:0.5.4
    ```
    
    Or install ChromaDB locally:
@@ -88,11 +94,17 @@ Local-RAG/
 ├── src/
 │   ├── main.ts                      # Interactive Q&A application
 │   └── vector.ts                    # Vector database setup
+├── prompts/
+│   └── default.json                 # Prompt templates configuration
 ├── package.json                     # Node.js dependencies and scripts
 ├── tsconfig.json                    # TypeScript configuration
+├── docker-compose.yml               # ChromaDB Docker setup
+├── .env.example                     # Environment variables template
 ├── realistic_restaurant_reviews.csv # Restaurant review dataset
-├── chroma_langchain_db/            # Vector database (auto-created)
 └── README.md                        # This file
+
+Note: Vector database data is stored in a Docker volume (chroma-data) when using docker-compose.
+If running Chroma with --path, data will be stored in chroma_langchain_db/ directory.
 ```
 
 ## Usage
@@ -107,8 +119,14 @@ Local-RAG/
    ```
 
 2. **Start ChromaDB server** (in a separate terminal):
+   Using Docker Compose (recommended):
    ```bash
-   docker run -p 8000:8000 chromadb/chroma
+   docker compose up
+   ```
+   
+   Or using plain Docker:
+   ```bash
+   docker run -p 8000:8000 chromadb/chroma:0.5.4
    ```
 
 3. **Setup vector database** (first time only):
@@ -148,7 +166,6 @@ The application follows a RAG architecture in two steps:
 ## Dependencies
 
 See [package.json](package.json) for full list:
-- **langchain**: LLM orchestration framework
 - **@langchain/community**: Community integrations (Ollama, Chroma)
 - **@langchain/core**: Core LangChain functionality
 - **chromadb**: ChromaDB client for vector storage
@@ -156,17 +173,40 @@ See [package.json](package.json) for full list:
 
 ## Configuration
 
-You can modify the following in the code:
+### Environment Variables
+
+Copy `.env.example` to `.env` and customize as needed:
+
+```bash
+cp .env.example .env
+```
+
+Available configuration options:
+- `OLLAMA_BASE_URL` - Ollama server URL (default: http://localhost:11434)
+- `OLLAMA_MODEL` - LLM model name (default: llama3.2)
+- `OLLAMA_EMBEDDING_MODEL` - Embedding model name (default: mxbai-embed-large)
+- `CHROMA_URL` - ChromaDB server URL (default: http://localhost:8000)
+- `CHROMA_COLLECTION_NAME` - Vector collection name (default: restaurant_reviews_ts)
+- `CSV_FILE_PATH` - Path to CSV data file (default: realistic_restaurant_reviews.csv)
+- `PROMPTS_CONFIG_PATH` - Path to prompts config (default: prompts/default.json)
+- `DEBUG_VECTOR_TEST` - Enable debug similarity search test (default: false)
+
+### Prompt Templates
+
+Customize prompts by editing `prompts/default.json`:
+- `template` - The prompt template sent to the LLM
+- `question` - The question prompt shown to users
+
+### Code Configuration
+
+You can also modify configuration directly in the code:
 
 **In `src/vector.ts`**:
+- Pass custom CSV path as command line argument: `npm run setup-vector path/to/file.csv`
 - `k: 5` - Change the number of reviews retrieved per query
-- `model: "mxbai-embed-large"` - Switch embedding models
-- `baseUrl: "http://localhost:11434"` - Ollama server URL
-- `url: "http://localhost:8000"` - ChromaDB server URL
 
 **In `src/main.ts`**:
-- `model: "llama3.2"` - Switch to a different Ollama model
-- `template` - Customize the prompt sent to the LLM
+- All major settings now use environment variables (see above)
 
 ## Troubleshooting
 

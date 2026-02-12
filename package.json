@@ -20,7 +20,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "langchain": "^0.1.0",
     "@langchain/community": "^0.0.40",
     "@langchain/core": "^0.1.0",
     "chromadb": "^1.8.0",
