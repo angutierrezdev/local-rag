@@ -22,12 +22,15 @@ This approach allows AI models to answer questions based on specific data (your 
 ## Prerequisites
 
 - **Ollama**: Download and install from [ollama.ai](https://ollama.ai)
-- **Python 3.8+**: For running the Python application
+- **ChromaDB Server**: Required for the application
+- **Node.js 18+**: For running the TypeScript version
 - **Required Models in Ollama**:
   - `llama3.2` (for the language model)
   - `mxbai-embed-large` (for embeddings)
 
 ## Installation
+
+### Setup Ollama Models
 
 1. **Install Ollama models** (if not already installed):
    ```bash
@@ -35,32 +38,73 @@ This approach allows AI models to answer questions based on specific data (your 
    ollama pull mxbai-embed-large
    ```
 
-2. **Clone/navigate to the project directory**:
+2. **Start Ollama** (keep running in background):
+   ```bash
+   ollama serve
+   ```
+
+### TypeScript/Node.js Version
+
+1. **Navigate to the project directory**:
    ```bash
    cd Local-RAG
    ```
 
-3. **Create a virtual environment** (recommended):
+2. **Install Node.js dependencies**:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   npm install
    ```
 
-4. **Install Python dependencies**:
+3. **Start ChromaDB server** (in a separate terminal):
+   Using Docker Compose (recommended):
    ```bash
-   pip install -r requirements.txt
+   docker compose up
+   ```
+   
+   Or using plain Docker:
+   ```bash
+   docker run -p 8000:8000 chromadb/chroma:0.5.4
+   ```
+   
+   Or install ChromaDB locally:
+   ```bash
+   pip install chromadb
+   chroma run --path ./chroma_langchain_db
+   ```
+
+4. **Setup vector database**:
+   ```bash
+   npm run setup-vector
+   ```
+
+5. **Run the application**:
+   ```bash
+   npm start
+   ```
+   
+   Or run directly with ts-node:
+   ```bash
+   npm run dev
    ```
 
 ## Project Structure
 
 ```
 Local-RAG/
-├── main.py                          # Interactive Q&A application
-├── vector.py                        # Vector database setup and retriever
-├── requirements.txt                 # Python dependencies
+├── src/
+│   ├── main.ts                      # Interactive Q&A application
+│   └── vector.ts                    # Vector database setup
+├── prompts/
+│   └── default.json                 # Prompt templates configuration
+├── package.json                     # Node.js dependencies and scripts
+├── tsconfig.json                    # TypeScript configuration
+├── docker-compose.yml               # ChromaDB Docker setup
+├── .env.example                     # Environment variables template
 ├── realistic_restaurant_reviews.csv # Restaurant review dataset
-├── chroma_langchain_db/            # Vector database (auto-created)
 └── README.md                        # This file
+
+Note: When using docker-compose (recommended), vector database data is stored in a Docker volume (chroma-data).
+The chroma_langchain_db/ directory is only created if you run Chroma locally with --path instead of Docker.
 ```
 
 ## Usage
@@ -74,51 +118,95 @@ Local-RAG/
    ollama list
    ```
 
-2. **Run the application**:
+2. **Start ChromaDB server** (in a separate terminal):
+   Using Docker Compose (recommended):
    ```bash
-   python main.py
+   docker compose up
+   ```
+   
+   Or using plain Docker:
+   ```bash
+   docker run -p 8000:8000 chromadb/chroma:0.5.4
    ```
 
-3. **Ask questions** about pizza restaurants:
+3. **Setup vector database** (first time only):
+   ```bash
+   npm run setup-vector
+   ```
+
+4. **Run the application**:
+   ```bash
+   npm start
+   ```
+
+5. **Ask questions** about pizza restaurants:
    ```
    Enter your question about pizza restaurants (or q to quit): What are the best pizza places for family dining?
    ```
 
-4. **Quit** by typing `q` when prompted.
+6. **Quit** by typing `q` when prompted.
 
 ## How It Works
 
-### Step 1: Vector Database Setup (`vector.py`)
+The application follows a RAG architecture in two steps:
+
+### Step 1: Vector Database Setup (`src/vector.ts`)
 - Loads restaurant reviews from `realistic_restaurant_reviews.csv`
 - Converts each review into a numerical embedding using `mxbai-embed-large`
 - Stores embeddings in Chroma vector database with metadata (rating, date)
 - Creates a retriever configured to return the 5 most relevant reviews
 
-### Step 2: Question Answering (`main.py`)
+### Step 2: Question Answering (`src/main.ts`)
 - User enters a question about pizza restaurants
 - The retriever searches for the 5 most relevant reviews using semantic similarity
 - These reviews are passed as context to the `llama3.2` model
 - The model generates an answer based on the context and user's question
 - Answer is displayed to the user
 
-## Requirements
+## Dependencies
 
-See [requirements.txt](requirements.txt) for full list:
-- **langchain**: LLM orchestration framework
-- **langchain-ollama**: Ollama integration for LangChain
-- **langchain-chroma**: Chroma vector database integration
-- **pandas**: Data processing for CSV files
+See [package.json](package.json) for full list:
+- **@langchain/community**: Community integrations (Ollama, Chroma)
+- **@langchain/core**: Core LangChain functionality
+- **chromadb**: ChromaDB client for vector storage
+- **csv-parse**: CSV data processing
 
 ## Configuration
 
-You can modify the following in the code:
+### Environment Variables
 
-**In `vector.py`**:
-- `search_kwargs={"k": 5}` - Change the number of reviews retrieved per query
+Copy `.env.example` to `.env` and customize as needed:
 
-**In `main.py`**:
-- `model="llama3.2"` - Switch to a different Ollama model
-- `template` - Customize the prompt sent to the LLM
+```bash
+cp .env.example .env
+```
+
+Available configuration options:
+- `OLLAMA_BASE_URL` - Ollama server URL (default: http://localhost:11434)
+- `OLLAMA_MODEL` - LLM model name (default: llama3.2)
+- `OLLAMA_EMBEDDING_MODEL` - Embedding model name (default: mxbai-embed-large)
+- `CHROMA_URL` - ChromaDB server URL (default: http://localhost:8000)
+- `CHROMA_COLLECTION_NAME` - Vector collection name (default: restaurant_reviews_ts)
+- `CSV_FILE_PATH` - Path to CSV data file (default: realistic_restaurant_reviews.csv)
+- `PROMPTS_CONFIG_PATH` - Path to prompts config (default: prompts/default.json)
+- `DEBUG_VECTOR_TEST` - Enable debug similarity search test (default: false)
+
+### Prompt Templates
+
+Customize prompts by editing `prompts/default.json`:
+- `template` - The prompt template sent to the LLM
+- `question` - The question prompt shown to users
+
+### Code Configuration
+
+You can also modify configuration directly in the code:
+
+**In `src/vector.ts`**:
+- Pass custom CSV path as command line argument: `npm run setup-vector path/to/file.csv`
+- `k: 5` - Change the number of reviews retrieved per query
+
+**In `src/main.ts`**:
+- All major settings now use environment variables (see above)
 
 ## Troubleshooting
 
@@ -126,12 +214,21 @@ You can modify the following in the code:
 - Ensure Ollama is running and models are installed: `ollama list`
 - Pull missing models: `ollama pull llama3.2` or `ollama pull mxbai-embed-large`
 
+**Connection refused error:**
+- Make sure Ollama is running: `ollama serve` in another terminal
+
+**ChromaDB connection error:**
+- Ensure ChromaDB server is running on port 8000
+- Docker: `docker run -p 8000:8000 chromadb/chroma`
+- Local: `chroma run --path ./chroma_langchain_db`
+
+**Module resolution errors:**
+- Ensure you're using Node.js 18 or higher: `node --version`
+- Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+
 **Slow first run:**
 - On first run, the vector database is created and all reviews are embedded (this takes time)
 - Subsequent runs will use the cached database
-
-**Connection refused error:**
-- Make sure Ollama is running: `ollama serve` in another terminal
 
 ## Performance Notes
 
@@ -149,8 +246,4 @@ You can modify the following in the code:
 
 ## License
 
-[Add your license here if applicable]
-
-## Author
-
-[Add your name/contact here if desired]
+MIT
