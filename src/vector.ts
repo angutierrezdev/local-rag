@@ -1,3 +1,5 @@
+// Load environment variables from .env file
+import "dotenv/config";
 // Import necessary libraries for vector embeddings and document storage
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { Chroma, type ChromaLibArgs } from "@langchain/community/vectorstores/chroma";
@@ -6,7 +8,12 @@ import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { readFileSync } from "fs";
 import { parse } from "csv-parse/sync";
 import path from "path";
-import { fileURLToPath } from "url";
+// Import types and utilities
+import type { RestaurantReview } from "./types.js";
+import { getDirname } from "./utils/esm.js";
+import { ConfigService } from "./config.js";
+// Import validation function for security
+import { validateCsvPath } from "./validation.js";
 
 /**
  * Patched Chroma class that fixes the "Invalid where clause" error.
@@ -68,38 +75,29 @@ class PatchedChroma extends Chroma {
   }
 }
 
-// Get the directory name in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Define the structure of our CSV data
-interface RestaurantReview {
-  Title: string;
-  Date: string;
-  Rating: number;
-  Review: string;
-}
-
 /**
  * Initialize the vector store and return a retriever
- * @param csvFilePath - Optional path to CSV file (default from env or hardcoded)
+ * @param csvFilePath - Optional path to CSV file (default from config)
  */
 export async function getRetriever(csvFilePath?: string) {
-  // Load environment variables or use defaults
-  const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const OLLAMA_EMBEDDING_MODEL = process.env.OLLAMA_EMBEDDING_MODEL || "mxbai-embed-large";
-  const CHROMA_URL = process.env.CHROMA_URL || "http://localhost:8000";
-  const CHROMA_COLLECTION_NAME = process.env.CHROMA_COLLECTION_NAME || "restaurant_reviews_ts";
-  const DEFAULT_CSV_PATH = process.env.CSV_FILE_PATH || "realistic_restaurant_reviews.csv";
-  const DEBUG_VECTOR_TEST = process.env.DEBUG_VECTOR_TEST === "true";
-
-  // Use provided path or default
-  const csvPath = csvFilePath 
-    ? path.resolve(csvFilePath)
-    : path.join(__dirname, "..", DEFAULT_CSV_PATH);
+  // Get configuration service
+  const configService = ConfigService.getInstance(import.meta.url);
+  const config = configService.getConfig();
   
-  console.log(`Loading reviews from: ${csvPath}`);
-  const csvContent = readFileSync(csvPath, "utf-8");
+  // Get project root directory
+  const projectRoot = getDirname(import.meta.url);
+  const projectRootDir = path.dirname(projectRoot);
+
+  // Use provided path or default from config
+  const csvPath = csvFilePath
+    ? csvFilePath
+    : path.join(projectRootDir, config.csv.filePath);
+
+  // Validate CSV path to prevent directory traversal attacks
+  const validatedCsvPath = validateCsvPath(csvPath, projectRootDir);
+
+  console.log(`Loading reviews from: ${validatedCsvPath}`);
+  const csvContent = readFileSync(validatedCsvPath, "utf-8");
 
   // Parse CSV data
   const records: RestaurantReview[] = parse(csvContent, {
@@ -115,32 +113,26 @@ export async function getRetriever(csvFilePath?: string) {
   });
 
   // Initialize the embedding model (converts text to numerical vectors)
-  const embeddings = new OllamaEmbeddings({
-    model: OLLAMA_EMBEDDING_MODEL,
-    baseUrl: OLLAMA_BASE_URL,
-  });
+  const embeddings = new OllamaEmbeddings(config.embeddings);
 
   let vectorStore: PatchedChroma;
 
   // Prefer connecting to an existing collection, creating a new one if needed,
   // to avoid Python/JS compatibility issues. ChromaDB is running in Docker
-  // on port 8000 (see docker-compose.yml).
+  // on the configured URL (see docker-compose.yml).
   console.log("Creating/connecting to vector database...");
 
   try {
     // Try to connect to existing collection first
     vectorStore = await PatchedChroma.fromExistingCollection(
       embeddings,
-      {
-        collectionName: CHROMA_COLLECTION_NAME,
-        url: CHROMA_URL,
-      }
+      config.chroma
     );
     console.log("Connected to existing collection");
   } catch (error) {
     // Collection doesn't exist or is incompatible, create a new one
     console.log("Creating new collection with documents...");
-    
+
     // Build documents only when we need to create a new collection
     const documents = records.map((row, index) => {
       return new Document({
@@ -151,14 +143,11 @@ export async function getRetriever(csvFilePath?: string) {
         }, // Additional info
       });
     });
-    
+
     vectorStore = await PatchedChroma.fromDocuments(
       documents,
       embeddings,
-      {
-        collectionName: CHROMA_COLLECTION_NAME,
-        url: CHROMA_URL,
-      }
+      config.chroma
     );
     console.log(`Added ${documents.length} documents to vector database`);
   }
@@ -169,7 +158,7 @@ export async function getRetriever(csvFilePath?: string) {
 
   // Optionally test the vector store directly first.
   // Enable by setting DEBUG_VECTOR_TEST=true in the environment.
-  if (DEBUG_VECTOR_TEST) {
+  if (config.debug.vectorTest) {
     try {
       console.log("Testing vector store with a direct search...");
       const testResults = await vectorStore.similaritySearch("pizza", 2);

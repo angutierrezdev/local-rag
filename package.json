@@ -22,8 +22,9 @@
   "dependencies": {
     "@langchain/community": "^0.0.40",
     "@langchain/core": "^0.1.0",
-    "chromadb": "^1.8.0",
-    "csv-parse": "^5.5.0"
+    "chromadb": "^1.10.5",
+    "csv-parse": "^5.5.0",
+    "dotenv": "^17.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
