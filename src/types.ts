@@ -50,6 +50,7 @@ export interface AppConfig {
   chroma: ChromaConfig;
   csv: CsvConfig;
   prompts: PromptsConfig;
+  chatWindowSize: number;
   debug: {
     vectorTest: boolean;
   };

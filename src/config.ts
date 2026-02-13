@@ -1,7 +1,5 @@
 import { readFileSync } from "fs";
-import path from "path";
 import { AppConfig, PromptsConfig } from "./types.js";
-import { getDirname } from "./utils/esm.js";
 import { resolveFromRoot } from "./utils/paths.js";
 
 /**
@@ -79,6 +77,10 @@ export class ConfigService {
         ),
       },
       prompts: promptsConfig,
+      chatWindowSize: parseInt(
+        this.getOptional("CHAT_WINDOW_SIZE", "10"),
+        10
+      ),
       debug: {
         vectorTest: process.env.DEBUG_VECTOR_TEST === "true",
       },
