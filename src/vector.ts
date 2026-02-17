@@ -124,6 +124,17 @@ export async function getRetriever(csvFilePath?: string) {
   console.log("Creating/connecting to vector database...");
   console.log(`Config ChromaDB: ${JSON.stringify(config.chroma)}`);
 
+  // Build documents first since we'll need them either way
+  const documents = records.map((row, index) => {
+    return new Document({
+      pageContent: `${row.Title} ${row.Review}`, // Main searchable text
+      metadata: {
+        rating: row.Rating,
+        date: row.Date,
+      }, // Additional info
+    });
+  });
+
   try {
     // Try to connect to existing collection first
     vectorStore = await PatchedChroma.fromExistingCollection(
@@ -131,20 +142,20 @@ export async function getRetriever(csvFilePath?: string) {
       config.chroma
     );
     console.log("Connected to existing collection");
+    
+    // Check if the collection has documents by getting the collection and checking count
+    const collection = await vectorStore.ensureCollection();
+    const count = await collection.count();
+    console.log(`Collection has ${count} documents`);
+    
+    if (count === 0) {
+      console.log("Collection is empty, adding documents...");
+      await vectorStore.addDocuments(documents);
+      console.log(`Added ${documents.length} documents to vector database`);
+    }
   } catch (error) {
     // Collection doesn't exist or is incompatible, create a new one
     console.log("Creating new collection with documents...");
-
-    // Build documents only when we need to create a new collection
-    const documents = records.map((row, index) => {
-      return new Document({
-        pageContent: `${row.Title} ${row.Review}`, // Main searchable text
-        metadata: {
-          rating: row.Rating,
-          date: row.Date,
-        }, // Additional info
-      });
-    });
 
     vectorStore = await PatchedChroma.fromDocuments(
       documents,
