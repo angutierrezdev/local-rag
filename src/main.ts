@@ -1,7 +1,7 @@
 // Load environment variables from .env file
 import "dotenv/config";
 // Import the LLM (Large Language Model) and prompt template components
-import { Ollama } from "@langchain/community/llms/ollama";
+import { Ollama } from "@langchain/ollama";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";

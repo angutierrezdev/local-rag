@@ -24,6 +24,8 @@ export interface OllamaEmbeddingsConfig {
 export interface ChromaConfig {
   url: string;
   collectionName: string;
+  tenant: string;
+  database: string;
 }
 
 /**

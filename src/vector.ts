@@ -1,7 +1,7 @@
 // Load environment variables from .env file
 import "dotenv/config";
 // Import necessary libraries for vector embeddings and document storage
-import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
+import { OllamaEmbeddings } from "@langchain/ollama";
 import { Chroma, type ChromaLibArgs } from "@langchain/community/vectorstores/chroma";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
@@ -120,7 +120,9 @@ export async function getRetriever(csvFilePath?: string) {
   // Prefer connecting to an existing collection, creating a new one if needed,
   // to avoid Python/JS compatibility issues. ChromaDB is running in Docker
   // on the configured URL (see docker-compose.yml).
+  // The tenant and database specified in config.chroma will be auto-created if they don't exist.
   console.log("Creating/connecting to vector database...");
+  console.log(`Config ChromaDB: ${JSON.stringify(config.chroma)}`);
 
   try {
     // Try to connect to existing collection first

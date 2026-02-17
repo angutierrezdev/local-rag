@@ -69,6 +69,8 @@ export class ConfigService {
           "CHROMA_COLLECTION_NAME",
           "restaurant_reviews_ts"
         ),
+        tenant: this.getOptional("CHROMA_TENANT", "default_tenant"),
+        database: this.getOptional("CHROMA_DATABASE", "default_database"),
       },
       csv: {
         filePath: this.getOptional(
