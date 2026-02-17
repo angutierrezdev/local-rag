@@ -125,7 +125,7 @@ export async function getRetriever(csvFilePath?: string) {
   console.log(`Config ChromaDB: ${JSON.stringify(config.chroma)}`);
 
   // Build documents first since we'll need them either way
-  const documents = records.map((row, index) => {
+  const documents = records.map((row) => {
     return new Document({
       pageContent: `${row.Title} ${row.Review}`, // Main searchable text
       metadata: {
