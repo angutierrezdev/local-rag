@@ -79,10 +79,17 @@ export class ConfigService {
         ),
       },
       prompts: promptsConfig,
-      chatWindowSize: parseInt(
-        this.getOptional("CHAT_WINDOW_SIZE", "10"),
-        10
-      ),
+      chatWindowSize: (() => {
+        const rawValue = this.getOptional("CHAT_WINDOW_SIZE", "10");
+        const parsedValue = parseInt(rawValue, 10);
+        if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+          console.warn(
+            `Invalid CHAT_WINDOW_SIZE value "${rawValue}". Using default value of 10.`
+          );
+          return 10;
+        }
+        return parsedValue;
+      })(),
       debug: {
         vectorTest: process.env.DEBUG_VECTOR_TEST === "true",
       },
