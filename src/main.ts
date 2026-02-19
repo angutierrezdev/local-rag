@@ -33,12 +33,8 @@ async function main() {
   const model = new Ollama(config.ollama);
 
   // Create a message-based prompt template with chat history support
-  // Extract system message from template by removing the {question} reference line
-  const systemMessage = promptsConfig.template
-    .split('\n')
-    .filter(line => !line.includes('{question}'))
-    .join('\n')
-    .trim();
+  // Derive system message by removing the {question} placeholder while preserving other instructions
+  const systemMessage = promptsConfig.template.replace(/{question}/g, "").trim();
   
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", systemMessage],
@@ -50,7 +46,7 @@ async function main() {
   const baseChain = prompt.pipe(model);
   const chain = new RunnableWithMessageHistory({
     runnable: baseChain,
-    getMessageHistory: async (_sessionId: string) => messageHistory,
+    getMessageHistory: (_sessionId: string) => messageHistory,
     inputMessagesKey: "question",
     historyMessagesKey: "chat_history",
   });
