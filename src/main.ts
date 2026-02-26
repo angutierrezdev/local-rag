@@ -1,8 +1,10 @@
 // Load environment variables from .env file
 import "dotenv/config";
 // Import the LLM (Large Language Model) and prompt template components
-import { Ollama } from "@langchain/community/llms/ollama";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { Ollama } from "@langchain/ollama";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
 import * as readline from "readline/promises";
 // Import the retriever we set up in vector.ts to search for relevant reviews
 import { getRetriever } from "./vector.js";
@@ -13,6 +15,9 @@ import { ConfigService } from "./config.js";
 
 // Get the configuration service (loads and validates all configuration)
 const configService = ConfigService.getInstance(import.meta.url);
+
+// Initialize message history for chat context (persists across questions in the session)
+const messageHistory = new InMemoryChatMessageHistory();
 
 /**
  * Main function to run the RAG application
@@ -27,11 +32,24 @@ async function main() {
   // Initialize the local Ollama LLM model
   const model = new Ollama(config.ollama);
 
-  // Create a prompt template object from the config
-  const prompt = ChatPromptTemplate.fromTemplate(promptsConfig.template);
+  // Create a message-based prompt template with chat history support
+  // Derive system message by removing the {question} placeholder while preserving other instructions
+  const systemMessage = promptsConfig.template.replace(/{question}/g, "").trim();
+  
+  const prompt = ChatPromptTemplate.fromMessages([
+    ["system", systemMessage],
+    new MessagesPlaceholder("chat_history"),
+    ["human", "{question}"],
+  ]);
 
-  // Create a chain that pipes the prompt into the model
-  const chain = prompt.pipe(model);
+  // Create a chain with message history support
+  const baseChain = prompt.pipe(model);
+  const chain = new RunnableWithMessageHistory({
+    runnable: baseChain,
+    getMessageHistory: (_sessionId: string) => messageHistory,
+    inputMessagesKey: "question",
+    historyMessagesKey: "chat_history",
+  });
 
   // Set up readline interface for interactive input
   const rl = readline.createInterface({
@@ -48,19 +66,26 @@ async function main() {
   // Main interactive loop - keeps asking questions until user quits
     while (true) {
       console.log("---------------------------------------------------");
-      // Always append "(or q to quit): " to the question prompt
+      // Always append command instructions to the question prompt
       let questionPrompt = promptsConfig.question || "Enter your question about pizza restaurants";
       questionPrompt = questionPrompt.trim();
       if (questionPrompt.endsWith(":")) {
         questionPrompt = questionPrompt.slice(0, -1).trim();
       }
-      questionPrompt += " (or q to quit): ";
+      questionPrompt += " (q=quit, clear=reset history): ";
       const question = await rl.question(questionPrompt);
       console.log("---------------------------------------------------");
 
       // Check if user wants to quit
       if (question.toLowerCase().trim() === "q") {
         break;
+      }
+
+      // Check if user wants to clear chat history
+      if (question.toLowerCase().trim() === "clear") {
+        await messageHistory.clear();
+        console.log("✓ Chat history cleared!");
+        continue;
       }
 
       // Validate question input
@@ -86,10 +111,15 @@ async function main() {
 
         // Step 2: Pass both the reviews and question to the LLM chain
         // The chain fills in the prompt template and sends it to the model
-        const results = await chain.invoke({
-          reviews: reviewsText, // Context from vector database (formatted as string)
-          question: sanitizedQuestion, // User's question (sanitized to prevent injection)
-        });
+        const results = await chain.invoke(
+          {
+            reviews: reviewsText, // Context from vector database (formatted as string)
+            question: sanitizedQuestion, // User's question (sanitized to prevent injection)
+          },
+          {
+            configurable: { sessionId: "default-session" },
+          }
+        );
 
         // Step 3: Print the LLM's answer
         console.log(results);

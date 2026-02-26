@@ -1,7 +1,5 @@
 import { readFileSync } from "fs";
-import path from "path";
 import { AppConfig, PromptsConfig } from "./types.js";
-import { getDirname } from "./utils/esm.js";
 import { resolveFromRoot } from "./utils/paths.js";
 
 /**
@@ -71,6 +69,8 @@ export class ConfigService {
           "CHROMA_COLLECTION_NAME",
           "restaurant_reviews_ts"
         ),
+        tenant: this.getOptional("CHROMA_TENANT", "default_tenant"),
+        database: this.getOptional("CHROMA_DATABASE", "default_database"),
       },
       csv: {
         filePath: this.getOptional(
@@ -79,6 +79,17 @@ export class ConfigService {
         ),
       },
       prompts: promptsConfig,
+      chatWindowSize: (() => {
+        const rawValue = this.getOptional("CHAT_WINDOW_SIZE", "10");
+        const parsedValue = parseInt(rawValue, 10);
+        if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+          console.warn(
+            `Invalid CHAT_WINDOW_SIZE value "${rawValue}". Using default value of 10.`
+          );
+          return 10;
+        }
+        return parsedValue;
+      })(),
       debug: {
         vectorTest: process.env.DEBUG_VECTOR_TEST === "true",
       },

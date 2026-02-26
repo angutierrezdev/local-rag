@@ -1,17 +1,21 @@
 services:
   # ChromaDB vector database
+  # Client connects using tenant and database configured via .env (e.g., CHROMA_TENANT, CHROMA_DATABASE)
   chroma:
-    image: chromadb/chroma:0.5.4
+    image: chromadb/chroma:0.5.23
     container_name: chroma-db
     ports:
       - "8000:8000"
     volumes:
-      - chroma-data:/chroma/data
+      - chroma-data:/data
     environment:
-      - CHROMA_DB_IMPL=duckdb
       - ALLOW_RESET=true
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/data
       - CHROMA_SERVER_HOST=${CHROMA_SERVER_HOST:-0.0.0.0}
       - CHROMA_SERVER_HTTP_PORT=${CHROMA_SERVER_HTTP_PORT:-8000}
+      # Note: CHROMA_TENANT and CHROMA_DATABASE are client-side configs in .env
+      # The server creates tenants/databases dynamically via API calls
     healthcheck:
       test: ["CMD", "curl", "-f", "${CHROMA_HEALTHCHECK_URL}"]
       interval: 5s

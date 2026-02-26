@@ -24,6 +24,8 @@ export interface OllamaEmbeddingsConfig {
 export interface ChromaConfig {
   url: string;
   collectionName: string;
+  tenant: string;
+  database: string;
 }
 
 /**
@@ -50,6 +52,7 @@ export interface AppConfig {
   chroma: ChromaConfig;
   csv: CsvConfig;
   prompts: PromptsConfig;
+  chatWindowSize: number;
   debug: {
     vectorTest: boolean;
   };
