@@ -86,17 +86,6 @@ export function validateFilePath(providedPath: string, baseDir: string): string 
 }
 
 /**
- * Validates that a CSV file path is safe and doesn't attempt directory traversal
- * @deprecated Use validateFilePath instead for support of multiple file formats
- * @param providedPath - User-provided file path
- * @param baseDir - Base directory where CSV files should be located
- * @returns Validated absolute path if safe, throws error otherwise
- */
-export function validateCsvPath(providedPath: string, baseDir: string): string {
-  return validateFilePath(providedPath, baseDir);
-}
-
-/**
  * Validates question input for common issues
  * @param question - User question
  * @returns Validation result with valid flag and optional error message
