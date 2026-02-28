@@ -5,15 +5,13 @@ import { OllamaEmbeddings } from "@langchain/ollama";
 import { Chroma, type ChromaLibArgs } from "@langchain/community/vectorstores/chroma";
 import { Document } from "@langchain/core/documents";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import { readFileSync } from "fs";
-import { parse } from "csv-parse/sync";
 import path from "path";
 // Import types and utilities
-import type { RestaurantReview } from "./types.js";
 import { getDirname } from "./utils/esm.js";
 import { ConfigService } from "./config.js";
-// Import validation function for security
-import { validateCsvPath } from "./validation.js";
+// Import validation and document loading functions
+import { validateFilePath } from "./validation.js";
+import { loadDocuments, detectFileType } from "./loaders/documentLoader.js";
 
 /**
  * Patched Chroma class that fixes the "Invalid where clause" error.
@@ -77,9 +75,10 @@ class PatchedChroma extends Chroma {
 
 /**
  * Initialize the vector store and return a retriever
- * @param csvFilePath - Optional path to CSV file (default from config)
+ * Supports CSV, PDF, and DOCX file formats
+ * @param filePath - Optional path to document file (default from config)
  */
-export async function getRetriever(csvFilePath?: string) {
+export async function getRetriever(filePath?: string) {
   // Get configuration service
   const configService = ConfigService.getInstance(import.meta.url);
   const config = configService.getConfig();
@@ -89,57 +88,53 @@ export async function getRetriever(csvFilePath?: string) {
   const projectRootDir = path.dirname(projectRoot);
 
   // Use provided path or default from config
-  const csvPath = csvFilePath
-    ? csvFilePath
+  const docPath = filePath
+    ? filePath
     : path.join(projectRootDir, config.csv.filePath);
 
-  // Validate CSV path to prevent directory traversal attacks
-  const validatedCsvPath = validateCsvPath(csvPath, projectRootDir);
+  // Validate file path to prevent directory traversal attacks
+  const validatedPath = validateFilePath(docPath, projectRootDir);
 
-  console.log(`Loading reviews from: ${validatedCsvPath}`);
-  const csvContent = readFileSync(validatedCsvPath, "utf-8");
+  // Load documents from file (auto-detects type from extension)
+  const documents = await loadDocuments(validatedPath);
 
-  // Parse CSV data
-  const records: RestaurantReview[] = parse(csvContent, {
-    columns: true,
-    skip_empty_lines: true,
-    cast: (value, context) => {
-      // Convert Rating to number
-      if (context.column === "Rating") {
-        return parseInt(value, 10);
-      }
-      return value;
-    },
-  });
+  // Create unique collection name based on the source file
+  // This prevents mixing data from different documents
+  const fileType = detectFileType(validatedPath);
+  const fileName = path.basename(validatedPath, path.extname(validatedPath));
+  const collectionName = `${fileType}_${fileName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .substring(0, 63); // ChromaDB collection name limit
+
+  console.log(`Using collection: ${collectionName}`);
+  console.log(`Source file: ${validatedPath}`);
 
   // Initialize the embedding model (converts text to numerical vectors)
   const embeddings = new OllamaEmbeddings(config.embeddings);
 
   let vectorStore: PatchedChroma;
 
+  // Create ChromaDB config with the file-specific collection name
+  const chromaConfig = {
+    ...config.chroma,
+    collectionName: collectionName,
+  };
+
   // Prefer connecting to an existing collection, creating a new one if needed,
   // to avoid Python/JS compatibility issues. ChromaDB is running in Docker
   // on the configured URL (see docker-compose.yml).
   // The tenant and database specified in config.chroma will be auto-created if they don't exist.
   console.log("Creating/connecting to vector database...");
-  console.log(`Config ChromaDB: ${JSON.stringify(config.chroma)}`);
+  console.log(`Config ChromaDB: ${JSON.stringify(chromaConfig)}`);
 
-  // Build documents first since we'll need them either way
-  const documents = records.map((row) => {
-    return new Document({
-      pageContent: `${row.Title} ${row.Review}`, // Main searchable text
-      metadata: {
-        rating: row.Rating,
-        date: row.Date,
-      }, // Additional info
-    });
-  });
+  // Documents have already been loaded and converted to LangChain Document objects
 
   try {
     // Try to connect to existing collection first
     vectorStore = await PatchedChroma.fromExistingCollection(
       embeddings,
-      config.chroma
+      chromaConfig
     );
     console.log("Connected to existing collection");
     
@@ -160,7 +155,7 @@ export async function getRetriever(csvFilePath?: string) {
     vectorStore = await PatchedChroma.fromDocuments(
       documents,
       embeddings,
-      config.chroma
+      chromaConfig
     );
     console.log(`Added ${documents.length} documents to vector database`);
   }
@@ -201,11 +196,11 @@ export async function getRetriever(csvFilePath?: string) {
 // Allow running this file directly to setup the vector database
 if (import.meta.url === `file://${process.argv[1]}`) {
   console.log("Setting up vector database...");
-  // Check for command-line argument for CSV path
-  const csvPath = process.argv[2];
-  if (csvPath) {
-    console.log(`Using custom CSV file: ${csvPath}`);
+  // Check for command-line argument for file path
+  const filePath = process.argv[2];
+  if (filePath) {
+    console.log(`Using custom file: ${filePath}`);
   }
-  await getRetriever(csvPath);
+  await getRetriever(filePath);
   console.log("Vector database setup complete!");
 }

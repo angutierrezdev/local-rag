@@ -37,14 +37,16 @@ export function sanitizeQuestion(input: string, maxLength: number = 5000): strin
 }
 
 /**
- * Validates that a CSV file path is safe and doesn't attempt directory traversal
+ * Validates that a file path is safe and doesn't attempt directory traversal
+ * Supports CSV, PDF, DOCX, and DOC file formats
  * @param providedPath - User-provided file path
- * @param baseDir - Base directory where CSV files should be located
+ * @param baseDir - Base directory where files should be located
  * @returns Validated absolute path if safe, throws error otherwise
+ * @throws Error if path is invalid, outside base directory, doesn't exist, or unsupported file type
  */
-export function validateCsvPath(providedPath: string, baseDir: string): string {
+export function validateFilePath(providedPath: string, baseDir: string): string {
   if (!providedPath || typeof providedPath !== "string") {
-    throw new Error("Invalid CSV path: must be a non-empty string");
+    throw new Error("Invalid file path: must be a non-empty string");
   }
 
   // Normalize the path to remove ../ patterns and resolve symlinks
@@ -62,18 +64,22 @@ export function validateCsvPath(providedPath: string, baseDir: string): string {
   // Ensure the resolved path is within the allowed base directory
   if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
     throw new Error(
-      `CSV path is outside allowed directory. Attempted: ${resolvedPath}, Allowed: ${resolvedBase}`
+      `File path is outside allowed directory. Attempted: ${resolvedPath}, Allowed: ${resolvedBase}`
     );
   }
 
   // Check file exists
   if (!existsSync(resolvedPath)) {
-    throw new Error(`CSV file not found: ${resolvedPath}`);
+    throw new Error(`File not found: ${resolvedPath}`);
   }
 
-  // Check it's a file, not a directory
-  if (!resolvedPath.endsWith(".csv")) {
-    throw new Error(`File must be a CSV file: ${resolvedPath}`);
+  // Check for supported file types
+  const supportedExtensions = [".csv", ".pdf", ".docx", ".doc"];
+  const ext = path.extname(resolvedPath).toLowerCase();
+  if (!supportedExtensions.includes(ext)) {
+    throw new Error(
+      `File must be one of: ${supportedExtensions.join(", ")}. Got: ${ext}`
+    );
   }
 
   return resolvedPath;
