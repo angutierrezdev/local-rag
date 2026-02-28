@@ -124,6 +124,7 @@ function loadCsv(filePath: string): Document[] {
         rating: row.Rating,
         date: row.Date,
         type: "csv",
+        source: filePath,
       },
     });
   });
