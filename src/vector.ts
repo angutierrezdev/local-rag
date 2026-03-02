@@ -104,7 +104,7 @@ export async function getRetriever(filePath?: string) {
   const fileName = path.basename(validatedPath, path.extname(validatedPath));
   const collectionName = `${fileType}_${fileName}`
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/[^a-z0-9_]/g, "_")
     .substring(0, 63); // ChromaDB collection name limit
 
   console.log(`Using collection: ${collectionName}`);

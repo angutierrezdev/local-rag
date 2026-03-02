@@ -26,7 +26,8 @@ Proposed: File Path → Document Loader → Documents → Vector Store
 ### 2. Required Dependencies
 
 ```bash
-npm install pdf-parse mammoth @types/pdf-parse
+npm install pdf-parse mammoth
+npm install --save-dev @types/pdf-parse
 ```
 
 **Packages:**
@@ -82,80 +83,91 @@ Changes needed:
 ```typescript
 // src/loaders/documentLoader.ts
 import { Document } from "@langchain/core/documents";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { readFileSync } from "fs";
 import { parse } from "csv-parse/sync";
 import path from "path";
-import pdf from "pdf-parse";
+import { createRequire } from "module";
 import mammoth from "mammoth";
 import type { RestaurantReview } from "../types.js";
 
-export type SupportedFileType = 'csv' | 'pdf' | 'docx';
+// Use createRequire to load CommonJS pdf-parse module
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
-/**
- * Detect file type from extension
- */
+// Text splitter for handling large documents that exceed embedding context length
+const textSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 1000,
+  chunkOverlap: 200,
+});
+
+export type SupportedFileType = "csv" | "pdf" | "docx";
+
 export function detectFileType(filePath: string): SupportedFileType {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
-    case '.csv':
-      return 'csv';
-    case '.pdf':
-      return 'pdf';
-    case '.docx':
-    case '.doc':
-      return 'docx';
+    case ".csv":
+      return "csv";
+    case ".pdf":
+      return "pdf";
+    case ".docx":
+    case ".doc":
+      return "docx";
     default:
       throw new Error(`Unsupported file type: ${ext}`);
   }
 }
 
 /**
- * Load PDF file and convert to documents
+ * Load PDF file and convert to LangChain documents, chunked for embedding
  */
 async function loadPdf(filePath: string): Promise<Document[]> {
   const dataBuffer = readFileSync(filePath);
-  const data = await pdf(dataBuffer);
-  
-  // Option 1: Single document with all pages
-  return [
-    new Document({
-      pageContent: data.text,
-      metadata: {
-        source: filePath,
-        pages: data.numpages,
-        type: 'pdf',
-      },
-    }),
-  ];
-  
-  // Option 2: Split by pages (future enhancement)
-  // This would create one document per page for better granularity
+  // pdfParse(buffer) returns { text, numpages, ... }
+  const data = await pdfParse(dataBuffer);
+
+  const doc = new Document({
+    pageContent: data.text,
+    metadata: {
+      source: filePath,
+      pages: data.numpages,
+      type: "pdf",
+    },
+  });
+
+  // Split large documents into chunks to fit embedding context window
+  const chunks = await textSplitter.splitDocuments([doc]);
+  console.log(`PDF split into ${chunks.length} chunks`);
+  return chunks;
 }
 
 /**
- * Load DOCX file and convert to documents
+ * Load DOCX file and convert to LangChain documents, chunked for embedding
  */
 async function loadDocx(filePath: string): Promise<Document[]> {
   const buffer = readFileSync(filePath);
   const result = await mammoth.extractRawText({ buffer });
-  
-  return [
-    new Document({
-      pageContent: result.value,
-      metadata: {
-        source: filePath,
-        type: 'docx',
-      },
-    }),
-  ];
+
+  const doc = new Document({
+    pageContent: result.value,
+    metadata: {
+      source: filePath,
+      type: "docx",
+    },
+  });
+
+  // Split large documents into chunks to fit embedding context window
+  const chunks = await textSplitter.splitDocuments([doc]);
+  console.log(`DOCX split into ${chunks.length} chunks`);
+  return chunks;
 }
 
 /**
- * Load CSV file (existing logic extracted)
+ * Load CSV file (expects columns: Title, Review, Rating, Date)
  */
 function loadCsv(filePath: string): Document[] {
   const csvContent = readFileSync(filePath, "utf-8");
-  
+
   const records: RestaurantReview[] = parse(csvContent, {
     columns: true,
     skip_empty_lines: true,
@@ -173,7 +185,8 @@ function loadCsv(filePath: string): Document[] {
       metadata: {
         rating: row.Rating,
         date: row.Date,
-        type: 'csv',
+        type: "csv",
+        source: filePath,
       },
     });
   });
@@ -184,16 +197,16 @@ function loadCsv(filePath: string): Document[] {
  */
 export async function loadDocuments(filePath: string): Promise<Document[]> {
   console.log(`Loading documents from: ${filePath}`);
-  
+
   const fileType = detectFileType(filePath);
   console.log(`Detected file type: ${fileType}`);
-  
+
   switch (fileType) {
-    case 'csv':
+    case "csv":
       return loadCsv(filePath);
-    case 'pdf':
+    case "pdf":
       return await loadPdf(filePath);
-    case 'docx':
+    case "docx":
       return await loadDocx(filePath);
     default:
       throw new Error(`Unsupported file type: ${fileType}`);
@@ -372,17 +385,17 @@ If issues arise:
 
 ## Implementation Checklist
 
-- [ ] Install npm packages (pdf-parse, mammoth)
-- [ ] Create `src/loaders/` directory
-- [ ] Implement `documentLoader.ts` with all loaders
-- [ ] Update `src/vector.ts` to use universal loader
-- [ ] Update `src/validation.ts` for new file types
-- [ ] Update JSDoc comments and parameter names
-- [ ] Test with CSV files (backward compatibility)
-- [ ] Test with PDF files
-- [ ] Test with DOCX files
-- [ ] Update README.md with new capabilities
-- [ ] Add example files for testing
+- [x] Install npm packages (pdf-parse, mammoth)
+- [x] Create `src/loaders/` directory
+- [x] Implement `documentLoader.ts` with all loaders
+- [x] Update `src/vector.ts` to use universal loader
+- [x] Update `src/validation.ts` for new file types
+- [x] Update JSDoc comments and parameter names
+- [x] Test with CSV files (backward compatibility)
+- [x] Test with PDF files
+- [x] Test with DOCX files
+- [x] Update README.md with new capabilities
+- [x] Add example files for testing
 
 ## Questions & Decisions
 
@@ -394,5 +407,5 @@ If issues arise:
 ---
 
 **Document Version:** 1.0  
-**Last Updated:** February 13, 2026  
-**Status:** Planning Phase
+**Last Updated:** March 2, 2026  
+**Status:** Implemented
