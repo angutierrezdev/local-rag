@@ -184,7 +184,7 @@ npm run setup-vector data/meeting_notes.docx                   # Collection: doc
    npm start
    ```
 
-5. **Ask questions** about pizza restaurants:
+5. **Ask questions** about your documents:
    ```
    Enter your question about pizza restaurants (q=quit, clear=reset history): What are the best pizza places for family dining?
    ```
