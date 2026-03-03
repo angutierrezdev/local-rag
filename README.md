@@ -126,9 +126,9 @@ The application automatically detects and loads documents from:
 
 | Format | Extension | Use Case | Notes |
 |--------|-----------|----------|-------|
-| **CSV** | `.csv` | Structured tabular data | Original format, works with any CSV schema |
-| **PDF** | `.pdf` | Scanned documents, reports | Extracts all text from all pages into single document |
-| **Word** | `.docx`, `.doc` | Microsoft Word documents | Extracts text content, preserves structure |
+| **CSV** | `.csv` | Structured tabular data | Expects columns: `Title`, `Review`, `Rating`, `Date` |
+| **PDF** | `.pdf` | Scanned documents, reports | Extracts text from all pages and chunks into multiple documents |
+| **Word** | `.docx`, `.doc` | Microsoft Word documents | Extracts raw text only (formatting/structure not preserved) |
 
 File type is automatically detected from the file extension - no manual specification needed!
 
@@ -138,9 +138,9 @@ Each document file creates its own ChromaDB collection to prevent mixing incompa
 
 ```bash
 # These commands create SEPARATE collections:
-npm run setup-vector data/restaurant_reviews.csv     # Collection: csv_restaurant_reviews
-npm run setup-vector data/research_paper.pdf         # Collection: pdf_research_paper  
-npm run setup-vector data/meeting_notes.docx         # Collection: docx_meeting_notes
+npm run setup-vector data/realistic_restaurant_reviews.csv     # Collection: csv_realistic_restaurant_reviews
+npm run setup-vector data/research_paper.pdf                   # Collection: pdf_research_paper  
+npm run setup-vector data/meeting_notes.docx                   # Collection: docx_meeting_notes
 ```
 
 **Important:** When you run the RAG application with `npm start`, it will use the collection from the **default file** specified in your configuration (`CSV_FILE_PATH` environment variable). To query a different document collection, update the `CSV_FILE_PATH` to point to that document's file path.

@@ -9,7 +9,7 @@ import type { RestaurantReview } from "../types.js";
 
 // Use createRequire to load CommonJS pdf-parse module
 const require = createRequire(import.meta.url);
-const { PDFParse } = require("pdf-parse");
+const pdfParse = require("pdf-parse");
 
 // Text splitter for handling large documents that exceed embedding context length
 const textSplitter = new RecursiveCharacterTextSplitter({
@@ -51,16 +51,15 @@ export function detectFileType(filePath: string): SupportedFileType {
 async function loadPdf(filePath: string): Promise<Document[]> {
   const dataBuffer = readFileSync(filePath);
   
-  // Use pdf-parse v2 API
-  const parser = new PDFParse({ data: dataBuffer });
-  const result = await parser.getText();
+  // Use pdf-parse function API: pdfParse(buffer) returns { text, numpages, ... }
+  const data = await pdfParse(dataBuffer);
 
   // Create initial document
   const doc = new Document({
-    pageContent: result.text,
+    pageContent: data.text,
     metadata: {
       source: filePath,
-      pages: result.numpages,
+      pages: data.numpages,
       type: "pdf",
     },
   });
