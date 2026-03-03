@@ -77,8 +77,9 @@ class PatchedChroma extends Chroma {
  * Initialize the vector store and return a retriever
  * Supports CSV, PDF, and DOCX file formats
  * @param filePath - Optional path to document file (default from config)
+ * @param clientId - Optional client ID prefix for multi-tenant collection naming
  */
-export async function getRetriever(filePath?: string) {
+export async function getRetriever(filePath?: string, clientId?: string) {
   // Get configuration service
   const configService = ConfigService.getInstance(import.meta.url);
   const config = configService.getConfig();
@@ -92,17 +93,25 @@ export async function getRetriever(filePath?: string) {
     ? filePath
     : path.join(projectRootDir, config.csv.filePath);
 
+  // When called from the watcher, files live in the watch folder (external to the project).
+  // Use the watch folder as the allowed base; otherwise restrict to the project root.
+  const allowedBaseDir = clientId ? config.watcher.watchFolder : projectRootDir;
+
   // Validate file path to prevent directory traversal attacks
-  const validatedPath = validateFilePath(docPath, projectRootDir);
+  const validatedPath = validateFilePath(docPath, allowedBaseDir);
 
   // Load documents from file (auto-detects type from extension)
   const documents = await loadDocuments(validatedPath);
 
-  // Create unique collection name based on the source file
-  // This prevents mixing data from different documents
+  // Create unique collection name based on the source file and optional clientId
+  // Format: {clientId}_{fileType}_{fileName} or {fileType}_{fileName} if no clientId
+  // This ensures multi-tenant isolation: each client's files get separate collections
   const fileType = detectFileType(validatedPath);
   const fileName = path.basename(validatedPath, path.extname(validatedPath));
-  const collectionName = `${fileType}_${fileName}`
+  const rawName = clientId
+    ? `${clientId}_${fileType}_${fileName}`
+    : `${fileType}_${fileName}`;
+  const collectionName = rawName
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_")
     .substring(0, 63); // ChromaDB collection name limit
@@ -191,6 +200,38 @@ export async function getRetriever(filePath?: string) {
 
   console.log("Retriever created successfully");
   return retriever;
+}
+
+/**
+ * List all collection names present in ChromaDB.
+ */
+export async function listCollections(): Promise<string[]> {
+  const configService = ConfigService.getInstance(import.meta.url);
+  const config = configService.getConfig();
+  const response = await fetch(`${config.chroma.url}/api/v1/collections`);
+  if (!response.ok) {
+    throw new Error(`Failed to list collections: ${response.status} ${response.statusText}`);
+  }
+  const collections = (await response.json()) as { name: string }[];
+  return collections.map((c) => c.name).sort();
+}
+
+/**
+ * Connect to an existing ChromaDB collection by name and return a retriever.
+ * Does NOT load or embed any documents — the collection must already exist.
+ * @param collectionName - Exact ChromaDB collection name
+ */
+export async function getRetrieverByCollectionName(collectionName: string) {
+  const configService = ConfigService.getInstance(import.meta.url);
+  const config = configService.getConfig();
+  const embeddings = new OllamaEmbeddings(config.embeddings);
+  const chromaConfig = {
+    ...config.chroma,
+    collectionName,
+  };
+  console.log(`Connecting to collection: ${collectionName}`);
+  const vectorStore = await PatchedChroma.fromExistingCollection(embeddings, chromaConfig);
+  return vectorStore.asRetriever({ k: 50, searchType: "similarity" });
 }
 
 // Allow running this file directly to setup the vector database

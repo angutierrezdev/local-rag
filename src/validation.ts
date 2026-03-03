@@ -1,5 +1,6 @@
 import { existsSync } from "fs";
 import path from "path";
+import { SUPPORTED_EXTENSIONS } from "./loaders/documentLoader.js";
 
 /**
  * Sanitizes user input to prevent LLM prompt injection attacks
@@ -38,7 +39,7 @@ export function sanitizeQuestion(input: string, maxLength: number = 5000): strin
 
 /**
  * Validates that a file path is safe and doesn't attempt directory traversal
- * Supports CSV, PDF, DOCX, and DOC file formats
+ * Supports CSV, PDF, DOCX, DOC, and TXT file formats
  * @param providedPath - User-provided file path
  * @param baseDir - Base directory where files should be located
  * @returns Validated absolute path if safe, throws error otherwise
@@ -74,11 +75,10 @@ export function validateFilePath(providedPath: string, baseDir: string): string 
   }
 
   // Check for supported file types
-  const supportedExtensions = [".csv", ".pdf", ".docx", ".doc"];
   const ext = path.extname(resolvedPath).toLowerCase();
-  if (!supportedExtensions.includes(ext)) {
+  if (!SUPPORTED_EXTENSIONS.has(ext)) {
     throw new Error(
-      `File must be one of: ${supportedExtensions.join(", ")}. Got: ${ext}`
+      `File must be one of: ${[...SUPPORTED_EXTENSIONS].join(", ")}. Got: ${ext}`
     );
   }
 

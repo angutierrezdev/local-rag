@@ -3,13 +3,9 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { readFileSync } from "fs";
 import { parse } from "csv-parse/sync";
 import path from "path";
-import { createRequire } from "module";
+import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import type { RestaurantReview } from "../types.js";
-
-// Use createRequire to load CommonJS pdf-parse module
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
 
 // Text splitter for handling large documents that exceed embedding context length
 const textSplitter = new RecursiveCharacterTextSplitter({
@@ -20,7 +16,19 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 /**
  * Supported file types for document loading
  */
-export type SupportedFileType = "csv" | "pdf" | "docx";
+export type SupportedFileType = "csv" | "pdf" | "docx" | "txt";
+
+/**
+ * Canonical set of supported file extensions.
+ * Import this wherever file-type validation is needed.
+ */
+export const SUPPORTED_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".csv",
+  ".pdf",
+  ".docx",
+  ".doc",
+  ".txt",
+]);
 
 /**
  * Detect file type from extension
@@ -38,6 +46,8 @@ export function detectFileType(filePath: string): SupportedFileType {
     case ".docx":
     case ".doc":
       return "docx";
+    case ".txt":
+      return "txt";
     default:
       throw new Error(`Unsupported file type: ${ext}`);
   }
@@ -50,25 +60,27 @@ export function detectFileType(filePath: string): SupportedFileType {
  */
 async function loadPdf(filePath: string): Promise<Document[]> {
   const dataBuffer = readFileSync(filePath);
-  
-  // Use pdf-parse function API: pdfParse(buffer) returns { text, numpages, ... }
-  const data = await pdfParse(dataBuffer);
+  const parser = new PDFParse({ data: dataBuffer });
 
-  // Create initial document
-  const doc = new Document({
-    pageContent: data.text,
-    metadata: {
-      source: filePath,
-      pages: data.numpages,
-      type: "pdf",
-    },
-  });
+  try {
+    const result = await parser.getText();
 
-  // Split large documents into chunks to fit embedding context window
-  const chunks = await textSplitter.splitDocuments([doc]);
-  console.log(`PDF split into ${chunks.length} chunks`);
-  
-  return chunks;
+    const doc = new Document({
+      pageContent: result.text,
+      metadata: {
+        source: filePath,
+        type: "pdf",
+      },
+    });
+
+    // Split large documents into chunks to fit embedding context window
+    const chunks = await textSplitter.splitDocuments([doc]);
+    console.log(`PDF split into ${chunks.length} chunks`);
+
+    return chunks;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 /**
@@ -92,6 +104,29 @@ async function loadDocx(filePath: string): Promise<Document[]> {
   const chunks = await textSplitter.splitDocuments([doc]);
   console.log(`DOCX split into ${chunks.length} chunks`);
   
+  return chunks;
+}
+
+/**
+ * Load plain text file and convert to LangChain documents
+ * @param filePath - Path to the .txt file
+ * @returns Array of Document objects with content and metadata
+ */
+async function loadTxt(filePath: string): Promise<Document[]> {
+  const content = readFileSync(filePath, "utf-8");
+
+  const doc = new Document({
+    pageContent: content,
+    metadata: {
+      source: filePath,
+      type: "txt",
+    },
+  });
+
+  // Split large documents into chunks to fit embedding context window
+  const chunks = await textSplitter.splitDocuments([doc]);
+  console.log(`TXT split into ${chunks.length} chunks`);
+
   return chunks;
 }
 
@@ -131,7 +166,7 @@ function loadCsv(filePath: string): Document[] {
 
 /**
  * Universal document loader that detects file type and loads accordingly
- * Supports CSV, PDF, and DOCX/DOC formats
+ * Supports CSV, PDF, DOCX/DOC, and TXT formats
  * @param filePath - Path to the file to load
  * @returns Promise resolving to array of Document objects
  * @throws Error if file type is not supported
@@ -147,6 +182,10 @@ function loadCsv(filePath: string): Document[] {
  * @example
  * // Load DOCX file
  * const docs = await loadDocuments('data/document.docx');
+ *
+ * @example
+ * // Load plain text file
+ * const docs = await loadDocuments('data/notes.txt');
  */
 export async function loadDocuments(filePath: string): Promise<Document[]> {
   console.log(`Loading documents from: ${filePath}`);
@@ -161,6 +200,8 @@ export async function loadDocuments(filePath: string): Promise<Document[]> {
       return await loadPdf(filePath);
     case "docx":
       return await loadDocx(filePath);
+    case "txt":
+      return await loadTxt(filePath);
     default:
       throw new Error(`Unsupported file type: ${fileType}`);
   }

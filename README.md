@@ -18,7 +18,7 @@ This approach allows AI models to answer questions based on specific data (your 
 - 🤖 **LLM Powered**: Leverages LLama 3.2 model for intelligent answers
 - 🧠 **Smart Embeddings**: Uses mxbai-embed-large for document embeddings
 - 💬 **Interactive Q&A**: Command-line interface for asking questions about restaurants
-- 📄 **Multi-Format Support**: Load documents from CSV, PDF, and DOCX files
+- 📄 **Multi-Format Support**: Load documents from CSV, PDF, DOCX, and TXT files
 - 🔄 **Auto-Detection**: Automatically detects file format by extension
 
 ## Prerequisites
@@ -129,6 +129,7 @@ The application automatically detects and loads documents from:
 | **CSV** | `.csv` | Structured tabular data | Expects columns: `Title`, `Review`, `Rating`, `Date` |
 | **PDF** | `.pdf` | Scanned documents, reports | Extracts text from all pages and chunks into multiple documents |
 | **Word** | `.docx`, `.doc` | Microsoft Word documents | Extracts raw text only (formatting/structure not preserved) |
+| **Text** | `.txt` | Plain text files | Split into chunks for large files |
 
 File type is automatically detected from the file extension - no manual specification needed!
 
@@ -141,6 +142,7 @@ Each document file creates its own ChromaDB collection to prevent mixing incompa
 npm run setup-vector data/realistic_restaurant_reviews.csv     # Collection: csv_realistic_restaurant_reviews
 npm run setup-vector data/research_paper.pdf                   # Collection: pdf_research_paper  
 npm run setup-vector data/meeting_notes.docx                   # Collection: docx_meeting_notes
+npm run setup-vector data/notes.txt                            # Collection: txt_notes
 ```
 
 **Important:** When you run the RAG application with `npm start`, it will use the collection from the **default file** specified in your configuration (`CSV_FILE_PATH` environment variable). To query a different document collection, update the `CSV_FILE_PATH` to point to that document's file path.
@@ -177,6 +179,7 @@ npm run setup-vector data/meeting_notes.docx                   # Collection: doc
    npm run setup-vector path/to/documents.pdf
    npm run setup-vector path/to/report.docx
    npm run setup-vector path/to/data.csv
+   npm run setup-vector path/to/notes.txt
    ```
 
 4. **Run the application**:
@@ -271,6 +274,7 @@ You can also modify configuration directly in the code:
   - `npm run setup-vector path/to/file.csv` - Load CSV data
   - `npm run setup-vector path/to/file.pdf` - Load PDF document
   - `npm run setup-vector path/to/file.docx` - Load Word document
+  - `npm run setup-vector path/to/file.txt` - Load plain text file
 - `k: 5` - Change the number of documents retrieved per query
 
 **In `src/main.ts`**:
@@ -348,6 +352,7 @@ curl -X DELETE http://localhost:8000/api/v1/collections/csv_old_data
 - For PDFs: Check the file is not password-protected or corrupted
 - For DOCX: Ensure it's a valid Microsoft Word format file
 - For large PDFs: The entire document is loaded into memory, so very large PDFs may be slow
+- For TXT: Ensure the file is UTF-8 encoded; non-UTF-8 encoding may cause loading errors
 
 ## Performance Notes
 

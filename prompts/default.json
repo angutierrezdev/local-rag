@@ -1,4 +1,4 @@
 {
-  "template": "\nYou are an expert in answering questions about pizza restaurants.\n\nHere are some relevant reviews about pizza restaurants: {reviews}\n\nHere is a question about pizza restaurants: {question}\n\nTry to be helpful but concise in your answer.\n",
-  "question": "Enter your question about pizza restaurants"
+  "template": "You are an expert assistant that answers questions based strictly on the provided documents.\n\nUse the following documents as context to answer the user's question:\n\n{reviews}\n\nIf the documents do not contain enough information to answer, say so clearly. Try to be helpful but concise.",
+  "question": "Enter your question"
 }

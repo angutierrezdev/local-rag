@@ -7,7 +7,7 @@ import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
 import * as readline from "readline/promises";
 // Import the retriever we set up in vector.ts to search for relevant reviews
-import { getRetriever } from "./vector.js";
+import { getRetriever, listCollections, getRetrieverByCollectionName } from "./vector.js";
 // Import validation functions for security
 import { sanitizeQuestion, validateQuestion } from "./validation.js";
 // Import configuration service
@@ -33,11 +33,9 @@ async function main() {
   const model = new Ollama(config.ollama);
 
   // Create a message-based prompt template with chat history support
-  // Derive system message by removing the {question} placeholder while preserving other instructions
-  const systemMessage = promptsConfig.template.replace(/{question}/g, "").trim();
-  
+  // The system message contains {reviews} which is filled at query time with retrieved documents
   const prompt = ChatPromptTemplate.fromMessages([
-    ["system", systemMessage],
+    ["system", promptsConfig.template],
     new MessagesPlaceholder("chat_history"),
     ["human", "{question}"],
   ]);
@@ -58,8 +56,36 @@ async function main() {
   });
 
   try {
-    // Get the retriever (this will set up the vector database if needed)
-    const retriever = await getRetriever();
+    // List available collections and let the user choose one
+    let retriever: Awaited<ReturnType<typeof getRetriever>>;
+    const collections = await listCollections();
+
+    if (collections.length === 0) {
+      console.log("No collections found in ChromaDB. Running default setup...");
+      retriever = await getRetriever();
+    } else {
+      console.log("\nAvailable collections:");
+      collections.forEach((name, idx) => {
+        console.log(`  [${idx + 1}] ${name}`);
+      });
+      console.log();
+
+      let chosenCollection: string | undefined;
+      while (!chosenCollection) {
+        const answer = await rl.question(
+          `Select a collection (1-${collections.length}): `
+        );
+        const num = parseInt(answer.trim(), 10);
+        if (num >= 1 && num <= collections.length) {
+          chosenCollection = collections[num - 1];
+        } else {
+          console.log(`Please enter a number between 1 and ${collections.length}.`);
+        }
+      }
+
+      console.log(`\nUsing collection: ${chosenCollection}`);
+      retriever = await getRetrieverByCollectionName(chosenCollection);
+    }
 
     console.log("RAG system ready!");
     
