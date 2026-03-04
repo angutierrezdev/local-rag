@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile.watcher
     container_name: rag-watcher
     volumes:
-      - ${API_DRIVE_PATH}:/watched
+      - ${API_DRIVE_PATH:-./watched}:/watched
     networks:
       - default
       - dactil-network
@@ -54,4 +54,4 @@ volumes:
 
 networks:
   dactil-network:
-    external: true
+    driver: bridge

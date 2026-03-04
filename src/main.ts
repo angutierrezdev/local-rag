@@ -5,6 +5,7 @@ import { Ollama } from "@langchain/ollama";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
+import { Document } from "@langchain/core/documents";
 import * as readline from "readline/promises";
 // Import the retriever we set up in vector.ts to search for relevant reviews
 import {
@@ -39,11 +40,14 @@ async function main() {
   const model = new Ollama(config.ollama);
 
   // Create a message-based prompt template with chat history support
-  // The system message contains {reviews} which is filled at query time with retrieved documents
+  // The system message contains {reviews} which is filled at query time with retrieved documents.
+  // If the template already includes {question}, omit the separate human message to avoid
+  // the question appearing twice in the final prompt.
+  const templateHasQuestion = promptsConfig.template.includes("{question}");
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", promptsConfig.template],
     new MessagesPlaceholder("chat_history"),
-    ["human", "{question}"],
+    ...(templateHasQuestion ? [] : [["human", "{question}"] as [string, string]]),
   ]);
 
   // Create a chain with message history support
@@ -63,14 +67,15 @@ async function main() {
 
   try {
     // List available collections and let the user choose one
-    type Retriever = Awaited<ReturnType<typeof getRetrieverByCollectionName>>;
+    // Define a minimal shared retriever interface so both code paths type-check without casting.
+    type Retriever = { invoke: (query: string) => Promise<Document[]> };
     let retrievers: Retriever[];
     const collections = await listCollections();
 
     if (collections.length === 0) {
       console.log("No collections found in ChromaDB. Running default setup...");
       const defaultRetriever = await getRetriever();
-      retrievers = [defaultRetriever as unknown as Retriever];
+      retrievers = [defaultRetriever];
     } else {
       console.log("\nAvailable collections:");
       collections.forEach((name, idx) => {

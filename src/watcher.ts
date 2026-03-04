@@ -86,8 +86,10 @@ async function startWatcher(): Promise<void> {
     // Expected structure: {watchFolder}/.../{clientId}/{filename}
     // Using the direct parent makes this robust regardless of how the volume is mounted.
     const clientId = path.basename(path.dirname(filePath));
+    const parentDir = path.resolve(path.dirname(filePath));
+    const resolvedWatchFolder = path.resolve(watchFolder);
 
-    if (!clientId || clientId === "." || clientId === watchFolder) {
+    if (!clientId || clientId === "." || parentDir === resolvedWatchFolder) {
       console.log(
         `[watcher] Ignoring file with no identifiable clientId folder: ${filePath}`
       );
@@ -169,9 +171,9 @@ startWatcher().catch((err) => {
   process.exit(1);
 });
 
-// Poll the queue every 30 seconds for files added after the initial scan.
+// Poll the queue every 5 seconds for files added after the initial scan.
 // The "ready" handler triggers an immediate first run so startup files
-// are not delayed by up to 30 s waiting for the first tick.
+// are not delayed by up to 5 s waiting for the first tick.
 setInterval(() => {
   processQueue().catch((err) => {
     console.error("[watcher] Unexpected error in processQueue:", err instanceof Error ? err.message : err);

@@ -176,6 +176,14 @@ async function addDocumentsInBatches(
   for (const doc of documents) {
     const docSize = sizeOf(doc);
 
+    // Warn when a single document exceeds the budget — it will be flushed alone
+    if (docSize > maxBudgetPerBatch) {
+      console.warn(
+        `[embed] Document chunk (${docSize} units) exceeds maxBudgetPerBatch ` +
+        `(${maxBudgetPerBatch}). Flushing as a single-document batch.`
+      );
+    }
+
     // If adding this doc would exceed the budget, dispatch current batch first
     if (batchBudget + docSize > maxBudgetPerBatch && batch.length > 0) {
       pending.push(flushSnapshot(batch, batchBudget));
@@ -343,12 +351,14 @@ export async function getRetriever(filePath?: string, clientId?: string) {
 }
 
 /**
- * List all collection names present in ChromaDB.
+ * List all collection names present in ChromaDB for the configured tenant and database.
  */
 export async function listCollections(): Promise<string[]> {
   const configService = ConfigService.getInstance(import.meta.url);
   const config = configService.getConfig();
-  const response = await fetch(`${config.chroma.url}/api/v1/collections`);
+  const { url, tenant, database } = config.chroma;
+  const params = new URLSearchParams({ tenant, database });
+  const response = await fetch(`${url}/api/v1/collections?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to list collections: ${response.status} ${response.statusText}`);
   }
