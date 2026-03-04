@@ -24,6 +24,9 @@ yarn-error.log*
 # Local vector database (generated at runtime)
 chroma_langchain_db/
 
+# Tesseract OCR language data (download separately)
+eng.traineddata
+
 # IDE and editor
 .vscode/
 .idea/

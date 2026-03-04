@@ -1,6 +1,7 @@
 // Load environment variables from .env file
 import "dotenv/config";
 import path from "path";
+import { readdirSync, statSync } from "fs";
 import { watch } from "chokidar";
 import { ConfigService } from "./config.js";
 import { getRetriever } from "./vector.js";
@@ -14,10 +15,12 @@ interface QueueItem {
 }
 
 const queue: QueueItem[] = [];
+const queuedFiles = new Set<string>(); // Track files already in queue to prevent duplicates
 let processing = false;
 
 /**
- * Process the ingestion queue sequentially (one file at a time).
+ * Process one item from the ingestion queue (if not already processing).
+ * Called on a fixed interval — no recursion, no manual re-triggering.
  * Sequential ingestion prevents concurrent ChromaDB writes and memory spikes.
  */
 async function processQueue(): Promise<void> {
@@ -42,9 +45,9 @@ async function processQueue(): Promise<void> {
     }
   }
 
+  // Remove from tracked set after processing so the file can be re-queued later if needed
+  queuedFiles.delete(item.filePath);
   processing = false;
-  // Process the next queued item, if any
-  processQueue();
 }
 
 /**
@@ -90,25 +93,87 @@ async function startWatcher(): Promise<void> {
       );
       return;
     }
+
+    // Check if file is already queued to prevent duplicate processing
+    if (queuedFiles.has(filePath)) {
+      console.log(
+        `[watcher] File already queued, ignoring duplicate: ${path.basename(filePath)}`
+      );
+      return;
+    }
+
     console.log(
       `[watcher] Queued: ${path.basename(filePath)} (clientId: ${clientId})`
     );
 
     queue.push({ filePath, clientId });
-    processQueue();
+    queuedFiles.add(filePath);
   });
 
   watcher.on("error", (error: unknown) => {
     console.error("[watcher] Watcher error:", error instanceof Error ? error.message : error);
   });
 
+  // Scan existing files only once chokidar has finished its initial baseline scan.
+  // Doing this in "ready" eliminates the race condition where a file added between
+  // the startup readdirSync and chokidar's first poll would be missed by both.
   watcher.on("ready", () => {
-    console.log("[watcher] Ready — waiting for new files...");
+    console.log("[watcher] Ready — scanning existing files...");
+    try {
+      const clientDirs = readdirSync(watchFolder);
+      for (const clientId of clientDirs) {
+        const clientPath = path.join(watchFolder, clientId);
+        if (!statSync(clientPath).isDirectory()) {
+          if (statSync(clientPath).isFile()) {
+            console.warn(
+              `[watcher] Ignoring file placed directly in watch folder (no clientId subfolder): ${clientId}`
+            );
+          }
+          continue;
+        }
+
+        const files = readdirSync(clientPath);
+        for (const file of files) {
+          const filePath = path.join(clientPath, file);
+          if (!statSync(filePath).isFile()) continue;
+          const ext = path.extname(filePath).toLowerCase();
+          if (!SUPPORTED_EXTENSIONS.has(ext)) continue;
+
+          // Check if file is already queued to prevent duplicate processing
+          if (queuedFiles.has(filePath)) {
+            console.log(`[watcher] Skipping already-queued file: ${file}`);
+            continue;
+          }
+
+          console.log(`[watcher] Queuing existing file: ${file} (clientId: ${clientId})`);
+          queue.push({ filePath, clientId });
+          queuedFiles.add(filePath);
+        }
+      }
+    } catch (err) {
+      console.warn("[watcher] Could not scan existing files:", err instanceof Error ? err.message : err);
+    }
+    console.log("[watcher] Waiting for new files...");
+
+    // Kick off processing immediately for files found during the initial scan
+    // rather than waiting up to 30 s for the first interval tick.
+    processQueue().catch((err) => {
+      console.error("[watcher] Unexpected error in processQueue:", err instanceof Error ? err.message : err);
+    });
   });
 }
 
-// Start the watcher
+// Start the watcher.
 startWatcher().catch((err) => {
   console.error("[watcher] Fatal startup error:", err);
   process.exit(1);
 });
+
+// Poll the queue every 30 seconds for files added after the initial scan.
+// The "ready" handler triggers an immediate first run so startup files
+// are not delayed by up to 30 s waiting for the first tick.
+setInterval(() => {
+  processQueue().catch((err) => {
+    console.error("[watcher] Unexpected error in processQueue:", err instanceof Error ? err.message : err);
+  });
+}, 5000);

@@ -7,7 +7,13 @@ import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
 import * as readline from "readline/promises";
 // Import the retriever we set up in vector.ts to search for relevant reviews
-import { getRetriever, listCollections, getRetrieverByCollectionName } from "./vector.js";
+import {
+  getRetriever,
+  listCollections,
+  getRetrieverByCollectionName,
+  extractClientId,
+  getCollectionsByClientId,
+} from "./vector.js";
 // Import validation functions for security
 import { sanitizeQuestion, validateQuestion } from "./validation.js";
 // Import configuration service
@@ -57,12 +63,14 @@ async function main() {
 
   try {
     // List available collections and let the user choose one
-    let retriever: Awaited<ReturnType<typeof getRetriever>>;
+    type Retriever = Awaited<ReturnType<typeof getRetrieverByCollectionName>>;
+    let retrievers: Retriever[];
     const collections = await listCollections();
 
     if (collections.length === 0) {
       console.log("No collections found in ChromaDB. Running default setup...");
-      retriever = await getRetriever();
+      const defaultRetriever = await getRetriever();
+      retrievers = [defaultRetriever as unknown as Retriever];
     } else {
       console.log("\nAvailable collections:");
       collections.forEach((name, idx) => {
@@ -83,8 +91,22 @@ async function main() {
         }
       }
 
-      console.log(`\nUsing collection: ${chosenCollection}`);
-      retriever = await getRetrieverByCollectionName(chosenCollection);
+      const clientId = extractClientId(chosenCollection);
+      const targetCollections =
+        clientId !== null
+          ? getCollectionsByClientId(clientId, collections)
+          : [chosenCollection];
+
+      if (targetCollections.length > 1) {
+        console.log(`\nFound ${targetCollections.length} collections for clientId "${clientId}":`);
+        targetCollections.forEach((name) => console.log(`  - ${name}`));
+      } else {
+        console.log(`\nUsing collection: ${chosenCollection}`);
+      }
+
+      retrievers = await Promise.all(
+        targetCollections.map((name) => getRetrieverByCollectionName(name))
+      );
     }
 
     console.log("RAG system ready!");
@@ -125,10 +147,21 @@ async function main() {
       const sanitizedQuestion = sanitizeQuestion(question);
 
       try {
-        // Step 1: Use the retriever to find the 5 most relevant reviews for this question
+        // Step 1: Use all retrievers to find relevant documents across collections
         console.log("Querying vector database for:", sanitizedQuestion);
-        const reviewDocs = await retriever.invoke(sanitizedQuestion);
-        console.log(`Found ${reviewDocs.length} relevant documents`);
+        const rawResults = await Promise.all(
+          retrievers.map((r) => r.invoke(sanitizedQuestion))
+        );
+        // Flatten and deduplicate by pageContent
+        const seen = new Set<string>();
+        const reviewDocs = rawResults.flat().filter((doc) => {
+          if (seen.has(doc.pageContent)) return false;
+          seen.add(doc.pageContent);
+          return true;
+        });
+        console.log(
+          `Found ${reviewDocs.length} relevant documents across ${retrievers.length} collection(s)`
+        );
 
         // Format the documents into a readable string
         const reviewsText = reviewDocs

@@ -1,7 +1,11 @@
 FROM node:20-alpine
 
-# Install curl for potential healthchecks and debugging
-RUN apk add --no-cache curl
+# Install system dependencies:
+# - curl: healthchecks and debugging
+# - fontconfig, freetype: required by @napi-rs/canvas for PDF-to-image rendering
+# - ttf-dejavu: fonts needed for canvas text rendering during OCR
+# Note: tesseract.js uses its own bundled WASM engine — no system tesseract needed
+RUN apk add --no-cache curl fontconfig freetype ttf-dejavu
 
 WORKDIR /app
 
