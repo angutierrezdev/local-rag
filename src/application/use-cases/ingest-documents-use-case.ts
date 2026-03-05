@@ -3,13 +3,13 @@
  * Use case for ingesting documents into the vector store
  */
 
-import type { IDocumentLoader } from "../ports/IDocumentLoader.js";
-import type { IVectorStore } from "../ports/IVectorStore.js";
-import type { ILogger } from "../ports/ILogger.js";
-import { IngestRequest } from "../dto/IngestRequest.js";
-import { IngestResponse } from "../dto/IngestResponse.js";
-import { DocumentIngestionPolicy } from "../../domain/domain-services/DocumentIngestionPolicy.js";
-import { MultiTenancyPolicy } from "../../domain/domain-services/MultiTenancyPolicy.js";
+import type { IDocumentLoader } from '../../application/ports/document-loader.js';
+import type { IVectorStore } from '../../application/ports/vector-store.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import { IngestRequest } from '../../application/dto/ingest-request.js';
+import { IngestResponse } from '../../application/dto/ingest-response.js';
+import { DocumentIngestionPolicy } from '../../domain/domain-services/document-ingestion-policy.js';
+import { MultiTenancyPolicy } from '../../domain/domain-services/multi-tenancy-policy.js';
 
 export class IngestDocumentsUseCase {
   private documentIngestionPolicy = new DocumentIngestionPolicy();

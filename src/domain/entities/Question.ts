@@ -23,11 +23,11 @@ export class Question implements IQuestion {
 
   private validateQuestion(text: string): void {
     if (!text || text.trim().length === 0) {
-      throw new Error("Question cannot be empty");
+      throw new Error("question cannot be empty");
     }
 
     if (text.length > 5000) {
-      throw new Error("Question exceeds maximum length of 5000 characters");
+      throw new Error("question exceeds maximum length of 5000 characters");
     }
   }
 

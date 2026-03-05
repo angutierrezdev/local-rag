@@ -3,8 +3,8 @@
  * Implements IPresenter for formatted console output
  */
 
-import type { IPresenter } from "../../application/ports/IPresenter.js";
-import type { RagResponse } from "../../domain/entities/RagResponse.js";
+import type { IPresenter } from "../../application/ports/presenter.js";
+import type { RagResponse } from "../../domain/entities/rag-response.js";
 
 export class PresenterAdapter implements IPresenter {
   format(response: RagResponse): string {

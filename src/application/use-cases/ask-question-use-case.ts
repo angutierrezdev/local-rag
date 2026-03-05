@@ -3,14 +3,14 @@
  * Use case for asking questions and getting RAG responses
  */
 
-import type { ILanguageModel } from "../ports/ILanguageModel.js";
-import type { IVectorStore } from "../ports/IVectorStore.js";
-import type { IMessageHistory } from "../ports/IMessageHistory.js";
-import type { ILogger } from "../ports/ILogger.js";
-import { AskQuestionRequest } from "../dto/AskQuestionRequest.js";
-import { AskQuestionResponse } from "../dto/AskQuestionResponse.js";
-import { Question } from "../../domain/entities/Question.js";
-import { RagResponse } from "../../domain/entities/RagResponse.js";
+import type { ILanguageModel } from '../../application/ports/language-model.js';
+import type { IVectorStore } from '../../application/ports/vector-store.js';
+import type { IMessageHistory } from '../../application/ports/message-history.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import { AskQuestionRequest } from '../../application/dto/ask-question-request.js';
+import { AskQuestionResponse } from '../../application/dto/ask-question-response.js';
+import { Question } from "../../domain/entities/question.js";
+import { RagResponse } from "../../domain/entities/rag-response.js";
 
 export class AskQuestionUseCase {
   constructor(
@@ -31,7 +31,7 @@ export class AskQuestionUseCase {
       }
 
       // Create domain entity
-      const question = new Question(request.question, request.clientId);
+      const question: Question = new Question(request.question, request.clientId);
 
       this.logger.debug("Processing question", {
         questionLength: question.getLength(),
@@ -60,7 +60,7 @@ export class AskQuestionUseCase {
       await this.messageHistory.addMessage("assistant", answer);
 
       // Create domain response
-      const ragResponse = new RagResponse(answer, documents);
+      const ragResponse: RagResponse = new RagResponse(answer, documents);
 
       const responseTime = Date.now() - startTime;
 
@@ -96,7 +96,7 @@ export class AskQuestionUseCase {
 Documents:
 ${documentContext}
 
-Question: ${question}
+question: ${question}
 
 Answer:`;
   }

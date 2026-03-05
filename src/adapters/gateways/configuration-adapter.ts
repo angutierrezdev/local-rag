@@ -3,7 +3,7 @@
  * Implements IConfiguration using the existing ConfigService
  */
 
-import type { IConfiguration } from "../../application/ports/IConfiguration.js";
+import type { IConfiguration } from '../../application/ports/configuration.js';
 import { ConfigService } from "../../config.js";
 import type { AppConfig } from "../../types.js";
 

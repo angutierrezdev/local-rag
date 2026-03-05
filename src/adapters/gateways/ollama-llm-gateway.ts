@@ -10,9 +10,9 @@ import {
 } from "@langchain/core/prompts";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import type { Runnable } from "@langchain/core/runnables";
-import type { ILanguageModel } from "../../application/ports/ILanguageModel.js";
-import type { ILogger } from "../../application/ports/ILogger.js";
-import type { IConfiguration } from "../../application/ports/IConfiguration.js";
+import type { ILanguageModel } from '../../application/ports/language-model.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import type { IConfiguration } from '../../application/ports/configuration.js';
 
 export class OllamaLLMGateway implements ILanguageModel {
   private chain!: RunnableWithMessageHistory<Record<string, string>, string>;

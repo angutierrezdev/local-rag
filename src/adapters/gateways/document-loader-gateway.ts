@@ -4,8 +4,9 @@
  */
 
 import type { Document } from "@langchain/core/documents";
-import type { IDocumentLoader } from "../../application/ports/IDocumentLoader.js";
-import type { ILogger } from "../../application/ports/ILogger.js";
+import type { IDocumentLoader } from '../../application/ports/document-loader.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import { loadDocuments } from '../../loaders/document-loader.js';
 import * as fs from "fs";
 import * as path from "path";
 
@@ -27,8 +28,7 @@ export class DocumentLoaderGateway implements IDocumentLoader {
     this.loaders.set("pdf", {
       load: async (filePath: string) => {
         this.logger.debug("Loading PDF", { filePath });
-        // Implementation delegated to existing loadDocuments
-        return [];
+        return loadDocuments(filePath);
       },
       getSupportedTypes: () => ["pdf"],
       getName: () => "PDFLoader",
@@ -38,13 +38,7 @@ export class DocumentLoaderGateway implements IDocumentLoader {
     this.loaders.set("txt", {
       load: async (filePath: string) => {
         this.logger.debug("Loading TXT", { filePath });
-        const content = fs.readFileSync(filePath, "utf-8");
-        return [
-          {
-            pageContent: content,
-            metadata: { source: filePath, type: "txt" },
-          },
-        ];
+        return loadDocuments(filePath);
       },
       getSupportedTypes: () => ["txt"],
       getName: () => "TextLoader",
@@ -54,8 +48,7 @@ export class DocumentLoaderGateway implements IDocumentLoader {
     this.loaders.set("csv", {
       load: async (filePath: string) => {
         this.logger.debug("Loading CSV", { filePath });
-        // Implementation delegated to existing loadDocuments
-        return [];
+        return loadDocuments(filePath);
       },
       getSupportedTypes: () => ["csv"],
       getName: () => "CSVLoader",
@@ -65,8 +58,7 @@ export class DocumentLoaderGateway implements IDocumentLoader {
     this.loaders.set("docx", {
       load: async (filePath: string) => {
         this.logger.debug("Loading DOCX", { filePath });
-        // Implementation delegated to existing loadDocuments
-        return [];
+        return loadDocuments(filePath);
       },
       getSupportedTypes: () => ["docx"],
       getName: () => "DocxLoader",

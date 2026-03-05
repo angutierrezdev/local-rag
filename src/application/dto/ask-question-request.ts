@@ -19,7 +19,7 @@ export class AskQuestionRequest {
     }
 
     if (this.question && this.question.length > 5000) {
-      errors.push("Question exceeds maximum length of 5000 characters");
+      errors.push("question exceeds maximum length of 5000 characters");
     }
 
     return {

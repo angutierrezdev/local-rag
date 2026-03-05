@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import path from "path";
-import { SUPPORTED_EXTENSIONS } from "./loaders/documentLoader.js";
+import { SUPPORTED_EXTENSIONS } from './loaders/document-loader.js';
 
 /**
  * Sanitizes user input to prevent LLM prompt injection attacks
@@ -94,23 +94,23 @@ export function validateQuestion(
   question: string
 ): { valid: boolean; error?: string } {
   if (!question || typeof question !== "string") {
-    return { valid: false, error: "Question must be a non-empty string" };
+    return { valid: false, error: "question must be a non-empty string" };
   }
 
   const trimmed = question.trim();
 
   if (trimmed.length === 0) {
-    return { valid: false, error: "Question cannot be empty" };
+    return { valid: false, error: "question cannot be empty" };
   }
 
   if (trimmed.length > 5000) {
-    return { valid: false, error: "Question is too long (max 5000 characters)" };
+    return { valid: false, error: "question is too long (max 5000 characters)" };
   }
 
   // Check for obvious injection patterns
   const injectionPatterns = /(\[SYSTEM\]|\[INST\]|<<SYS>>|<\/SYS>>|```)/gi;
   if (injectionPatterns.test(trimmed)) {
-    return { valid: false, error: "Question contains potentially harmful patterns" };
+    return { valid: false, error: "question contains potentially harmful patterns" };
   }
 
   return { valid: true };

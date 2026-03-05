@@ -4,8 +4,8 @@
  */
 
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
-import type { IMessageHistory, Message } from "../../application/ports/IMessageHistory.js";
-import type { ILogger } from "../../application/ports/ILogger.js";
+import type { IMessageHistory, Message } from '../../application/ports/message-history.js';
+import type { ILogger } from '../../application/ports/logger.js';
 
 export class InMemoryHistoryGateway implements IMessageHistory {
   private messageHistory: InMemoryChatMessageHistory;

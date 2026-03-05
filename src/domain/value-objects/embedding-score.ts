@@ -51,3 +51,4 @@ export class EmbeddingScore {
     return new EmbeddingScore(value);
   }
 }
+

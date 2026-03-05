@@ -33,14 +33,14 @@ export class QuestionValidator {
     if (trimmed.length < this.minLength) {
       errors.push({
         field: "question",
-        message: `Question must be at least ${this.minLength} character long`,
+        message: `question must be at least ${this.minLength} character long`,
       });
     }
 
     if (trimmed.length > this.maxLength) {
       errors.push({
         field: "question",
-        message: `Question cannot exceed ${this.maxLength} characters`,
+        message: `question cannot exceed ${this.maxLength} characters`,
       });
     }
 

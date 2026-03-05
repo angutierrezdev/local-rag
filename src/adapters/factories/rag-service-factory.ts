@@ -3,27 +3,27 @@
  * Assembles all dependencies and creates the RAG application components
  */
 
-import type { ILanguageModel } from "../../application/ports/ILanguageModel.js";
-import type { IVectorStore } from "../../application/ports/IVectorStore.js";
-import type { IEmbeddings } from "../../application/ports/IEmbeddings.js";
-import type { IMessageHistory } from "../../application/ports/IMessageHistory.js";
-import type { IDocumentLoader } from "../../application/ports/IDocumentLoader.js";
-import type { IConfiguration } from "../../application/ports/IConfiguration.js";
-import type { ILogger } from "../../application/ports/ILogger.js";
-import type { IPresenter } from "../../application/ports/IPresenter.js";
+import type { ILanguageModel } from '../../application/ports/language-model.js';
+import type { IVectorStore } from '../../application/ports/vector-store.js';
+import type { IEmbeddings } from '../../application/ports/embeddings.js';
+import type { IMessageHistory } from '../../application/ports/message-history.js';
+import type { IDocumentLoader } from '../../application/ports/document-loader.js';
+import type { IConfiguration } from '../../application/ports/configuration.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import type { IPresenter } from '../../application/ports/presenter.js';
 
-import { OllamaLLMGateway } from "../gateways/OllamaLLMGateway.js";
-import { ChromaVectorGateway } from "../gateways/ChromaVectorGateway.js";
-import { OllamaEmbeddingsGateway } from "../gateways/OllamaEmbeddingsGateway.js";
-import { InMemoryHistoryGateway } from "../gateways/InMemoryHistoryGateway.js";
-import { DocumentLoaderGateway } from "../gateways/DocumentLoaderGateway.js";
-import { ConfigurationAdapter } from "../gateways/ConfigurationAdapter.js";
-import { ConsoleLoggerAdapter } from "../gateways/ConsoleLoggerAdapter.js";
-import { PresenterAdapter } from "../gateways/PresenterAdapter.js";
+import { OllamaLLMGateway } from '../gateways/ollama-llm-gateway.js';
+import { ChromaVectorGateway } from '../gateways/chroma-vector-gateway.js';
+import { OllamaEmbeddingsGateway } from '../gateways/ollama-embeddings-gateway.js';
+import { InMemoryHistoryGateway } from '../gateways/in-memory-history-gateway.js';
+import { DocumentLoaderGateway } from '../gateways/document-loader-gateway.js';
+import { ConfigurationAdapter } from '../gateways/configuration-adapter.js';
+import { ConsoleLoggerAdapter } from '../gateways/console-logger-adapter.js';
+import { PresenterAdapter } from '../gateways/presenter-adapter.js';
 
-import { AskQuestionUseCase } from "../../application/use-cases/AskQuestionUseCase.js";
-import { IngestDocumentsUseCase } from "../../application/use-cases/IngestDocumentsUseCase.js";
-import { ClearHistoryUseCase } from "../../application/use-cases/ClearHistoryUseCase.js";
+import { AskQuestionUseCase } from '../../application/use-cases/ask-question-use-case.js';
+import { IngestDocumentsUseCase } from '../../application/use-cases/ingest-documents-use-case.js';
+import { ClearHistoryUseCase } from '../../application/use-cases/clear-history-use-case.js';
 
 export interface RagServices {
   languageModel: ILanguageModel;
@@ -102,3 +102,4 @@ export class RagServiceFactory {
     };
   }
 }
+

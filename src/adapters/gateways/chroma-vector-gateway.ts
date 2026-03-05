@@ -5,10 +5,10 @@
 
 import type { Document } from "@langchain/core/documents";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
-import type { IVectorStore, SearchOptions } from "../../application/ports/IVectorStore.js";
-import type { IEmbeddings } from "../../application/ports/IEmbeddings.js";
-import type { ILogger } from "../../application/ports/ILogger.js";
-import type { IConfiguration } from "../../application/ports/IConfiguration.js";
+import type { IVectorStore, SearchOptions } from '../../application/ports/vector-store.js';
+import type { IEmbeddings } from '../../application/ports/embeddings.js';
+import type { ILogger } from '../../application/ports/logger.js';
+import type { IConfiguration } from '../../application/ports/configuration.js';
 
 export class ChromaVectorGateway implements IVectorStore {
   private collections: Map<string, Chroma> = new Map();

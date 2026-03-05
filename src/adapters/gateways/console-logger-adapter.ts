@@ -3,7 +3,7 @@
  * Implements ILogger using console output
  */
 
-import type { ILogger, LogLevel } from "../../application/ports/ILogger.js";
+import type { ILogger, LogLevel } from '../../application/ports/logger.js';
 
 export class ConsoleLoggerAdapter implements ILogger {
   private level: LogLevel = "info";

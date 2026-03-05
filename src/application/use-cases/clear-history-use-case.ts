@@ -3,8 +3,8 @@
  * Use case for clearing conversation history
  */
 
-import type { IMessageHistory } from "../ports/IMessageHistory.js";
-import type { ILogger } from "../ports/ILogger.js";
+import type { IMessageHistory } from '../../application/ports/message-history.js';
+import type { ILogger } from '../../application/ports/logger.js';
 
 export class ClearHistoryUseCase {
   constructor(

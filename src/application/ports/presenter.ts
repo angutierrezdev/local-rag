@@ -3,7 +3,7 @@
  * Abstraction for output presentation
  */
 
-import type { RagResponse } from "../../domain/entities/RagResponse.js";
+import type { RagResponse } from "../../domain/entities/rag-response.js";
 
 export interface IPresenter {
   /**

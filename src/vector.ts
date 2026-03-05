@@ -11,7 +11,7 @@ import { getDirname } from "./utils/esm.js";
 import { ConfigService } from "./config.js";
 // Import validation and document loading functions
 import { validateFilePath } from "./validation.js";
-import { loadDocuments, detectFileType, KNOWN_FILE_TYPES } from "./loaders/documentLoader.js";
+import { loadDocuments, detectFileType, KNOWN_FILE_TYPES } from './loaders/document-loader.js';
 
 /**
  * Patched Chroma class that fixes the "Invalid where clause" error.

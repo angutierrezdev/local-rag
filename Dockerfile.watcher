@@ -20,6 +20,11 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 COPY prompts/ ./prompts/
 
+# Copy Tesseract language data — tesseract.js expects the .gz compressed form
+RUN mkdir -p ./tessdata
+COPY eng.traineddata ./tessdata/
+RUN gzip -f ./tessdata/eng.traineddata
+
 # Create the watched folder inside the container
 RUN mkdir -p /watched
 
