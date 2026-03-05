@@ -44,6 +44,14 @@ export interface PromptsConfig {
 }
 
 /**
+ * Folder watcher configuration
+ */
+export interface WatcherConfig {
+  watchFolder: string;
+  watchPolling: boolean;
+}
+
+/**
  * Combined application configuration
  */
 export interface AppConfig {
@@ -53,6 +61,7 @@ export interface AppConfig {
   csv: CsvConfig;
   prompts: PromptsConfig;
   chatWindowSize: number;
+  watcher: WatcherConfig;
   debug: {
     vectorTest: boolean;
   };

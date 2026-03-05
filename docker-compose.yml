@@ -8,6 +8,9 @@ services:
       - "8000:8000"
     volumes:
       - chroma-data:/data
+    networks:
+      - default
+      - dactil-network
     environment:
       - ALLOW_RESET=true
       - IS_PERSISTENT=TRUE
@@ -22,5 +25,33 @@ services:
       timeout: 3s
       retries: 5
 
+  # Folder watcher service - monitors the API drive folder and auto-ingests new files
+  watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.watcher
+    container_name: rag-watcher
+    volumes:
+      - ${API_DRIVE_PATH:-./watched}:/watched
+    networks:
+      - default
+      - dactil-network
+    environment:
+      - WATCH_POLLING=true
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - OLLAMA_EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large}
+      - CHROMA_URL=http://chroma-db:8000
+      - CHROMA_TENANT=${CHROMA_TENANT:-default_tenant}
+      - CHROMA_DATABASE=${CHROMA_DATABASE:-default_database}
+    depends_on:
+      chroma:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   chroma-data:
+
+networks:
+  dactil-network:
+    driver: bridge

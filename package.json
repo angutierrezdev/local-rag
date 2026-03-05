@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/main.ts",
     "dev": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/main.ts",
-    "setup-vector": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/vector.ts"
+    "setup-vector": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/vector.ts",
+    "watch": "NODE_NO_WARNINGS=1 node --loader ts-node/esm src/watcher.ts"
   },
   "keywords": [
     "rag",
@@ -19,17 +20,28 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "dependencies": {
     "@langchain/community": "^1.1.15",
     "@langchain/core": "^1.1.24",
     "@langchain/ollama": "^1.2.2",
+    "@napi-rs/canvas": "^0.1.95",
+    "chokidar": "^5.0.0",
     "chromadb": "^1.10.5",
     "csv-parse": "^5.5.0",
     "dotenv": "^17.3.1",
     "mammoth": "^1.11.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.5.207",
+    "tesseract.js": "^7.0.0"
+  },
+  "overrides": {
+    "pdfjs-dist": "^5.5.207"
   },
   "devDependencies": {
+    "@types/chokidar": "^1.7.5",
     "@types/node": "^20.11.0",
     "@types/pdf-parse": "^1.1.5",
     "ts-node": "^10.9.2",

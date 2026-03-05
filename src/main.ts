@@ -5,9 +5,16 @@ import { Ollama } from "@langchain/ollama";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
+import { Document } from "@langchain/core/documents";
 import * as readline from "readline/promises";
 // Import the retriever we set up in vector.ts to search for relevant reviews
-import { getRetriever } from "./vector.js";
+import {
+  getRetriever,
+  listCollections,
+  getRetrieverByCollectionName,
+  extractClientId,
+  getCollectionsByClientId,
+} from "./vector.js";
 // Import validation functions for security
 import { sanitizeQuestion, validateQuestion } from "./validation.js";
 // Import configuration service
@@ -33,13 +40,14 @@ async function main() {
   const model = new Ollama(config.ollama);
 
   // Create a message-based prompt template with chat history support
-  // Derive system message by removing the {question} placeholder while preserving other instructions
-  const systemMessage = promptsConfig.template.replace(/{question}/g, "").trim();
-  
+  // The system message contains {reviews} which is filled at query time with retrieved documents.
+  // If the template already includes {question}, omit the separate human message to avoid
+  // the question appearing twice in the final prompt.
+  const templateHasQuestion = promptsConfig.template.includes("{question}");
   const prompt = ChatPromptTemplate.fromMessages([
-    ["system", systemMessage],
+    ["system", promptsConfig.template],
     new MessagesPlaceholder("chat_history"),
-    ["human", "{question}"],
+    ...(templateHasQuestion ? [] : [["human", "{question}"] as [string, string]]),
   ]);
 
   // Create a chain with message history support
@@ -58,8 +66,53 @@ async function main() {
   });
 
   try {
-    // Get the retriever (this will set up the vector database if needed)
-    const retriever = await getRetriever();
+    // List available collections and let the user choose one
+    // Define a minimal shared retriever interface so both code paths type-check without casting.
+    type Retriever = { invoke: (query: string) => Promise<Document[]> };
+    let retrievers: Retriever[];
+    const collections = await listCollections();
+
+    if (collections.length === 0) {
+      console.log("No collections found in ChromaDB. Running default setup...");
+      const defaultRetriever = await getRetriever();
+      retrievers = [defaultRetriever];
+    } else {
+      console.log("\nAvailable collections:");
+      collections.forEach((name, idx) => {
+        console.log(`  [${idx + 1}] ${name}`);
+      });
+      console.log();
+
+      let chosenCollection: string | undefined;
+      while (!chosenCollection) {
+        const answer = await rl.question(
+          `Select a collection (1-${collections.length}): `
+        );
+        const num = parseInt(answer.trim(), 10);
+        if (num >= 1 && num <= collections.length) {
+          chosenCollection = collections[num - 1];
+        } else {
+          console.log(`Please enter a number between 1 and ${collections.length}.`);
+        }
+      }
+
+      const clientId = extractClientId(chosenCollection);
+      const targetCollections =
+        clientId !== null
+          ? getCollectionsByClientId(clientId, collections)
+          : [chosenCollection];
+
+      if (targetCollections.length > 1) {
+        console.log(`\nFound ${targetCollections.length} collections for clientId "${clientId}":`);
+        targetCollections.forEach((name) => console.log(`  - ${name}`));
+      } else {
+        console.log(`\nUsing collection: ${chosenCollection}`);
+      }
+
+      retrievers = await Promise.all(
+        targetCollections.map((name) => getRetrieverByCollectionName(name))
+      );
+    }
 
     console.log("RAG system ready!");
     
@@ -99,10 +152,21 @@ async function main() {
       const sanitizedQuestion = sanitizeQuestion(question);
 
       try {
-        // Step 1: Use the retriever to find the 5 most relevant reviews for this question
+        // Step 1: Use all retrievers to find relevant documents across collections
         console.log("Querying vector database for:", sanitizedQuestion);
-        const reviewDocs = await retriever.invoke(sanitizedQuestion);
-        console.log(`Found ${reviewDocs.length} relevant documents`);
+        const rawResults = await Promise.all(
+          retrievers.map((r) => r.invoke(sanitizedQuestion))
+        );
+        // Flatten and deduplicate by pageContent
+        const seen = new Set<string>();
+        const reviewDocs = rawResults.flat().filter((doc) => {
+          if (seen.has(doc.pageContent)) return false;
+          seen.add(doc.pageContent);
+          return true;
+        });
+        console.log(
+          `Found ${reviewDocs.length} relevant documents across ${retrievers.length} collection(s)`
+        );
 
         // Format the documents into a readable string
         const reviewsText = reviewDocs

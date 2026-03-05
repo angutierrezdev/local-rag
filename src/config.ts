@@ -79,6 +79,11 @@ export class ConfigService {
         ),
       },
       prompts: promptsConfig,
+      watcher: {
+        watchFolder:
+          this.getOptional("API_DRIVE_PATH", "/watched"), 
+        watchPolling: this.getOptional("WATCH_POLLING", "true") === "true",
+      },
       chatWindowSize: (() => {
         const rawValue = this.getOptional("CHAT_WINDOW_SIZE", "10");
         const parsedValue = parseInt(rawValue, 10);
@@ -131,6 +136,13 @@ export class ConfigService {
    */
   getPromptsConfig() {
     return this.getConfig().prompts;
+  }
+
+  /**
+   * Get folder watcher configuration
+   */
+  getWatcherConfig() {
+    return this.getConfig().watcher;
   }
 
   /**
