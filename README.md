@@ -2,7 +2,7 @@
 
 A Retrieval-Augmented Generation (RAG) application that answers questions about any document using locally-hosted AI models. Load CSV datasets, PDFs (including scanned / image-based ones), Word documents, or plain text files and query them through a conversational CLI.
 
-Built with Ollama for LLM and embeddings, ChromaDB for vector storage, and LangChain for orchestration. Everything runs fully offline.
+Built with Ollama for LLM and embeddings, ChromaDB for vector storage, and LangChain for orchestration. Everything runs fully offline — OCR requires a local `tessdata/eng.traineddata` file (see [OCR Setup](#ocr-setup) below).
 
 ## What is RAG?
 
@@ -29,7 +29,7 @@ Retrieval-Augmented Generation (RAG) combines:
 
 - **Ollama** — [ollama.ai](https://ollama.ai)
 - **Docker** — for ChromaDB and the watcher service
-- **Node.js 18+**
+- **Node.js 20.19+**
 - **Ollama models**:
   ```bash
   ollama pull llama3.2
@@ -66,6 +66,18 @@ Retrieval-Augmented Generation (RAG) combines:
    npm start
    ```
    Select a collection when prompted, then ask questions.
+
+## OCR Setup
+
+To process scanned / image-based PDFs fully offline, Tesseract.js must load language data from a local directory. Download `eng.traineddata` (the English language model) into a `tessdata/` folder at the project root:
+
+```bash
+mkdir -p tessdata
+curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata \
+     -o tessdata/eng.traineddata
+```
+
+The `tessdata/` directory is excluded from version control (`.gitignore`). If OCR is not needed, you can skip this step — text-based PDFs do not require it.
 
 ## Project Structure
 
@@ -247,7 +259,7 @@ docker compose down -v && docker compose up -d chroma
 | Models not found | `ollama pull llama3.2 && ollama pull mxbai-embed-large` |
 | Slow first run | Normal — embeddings are computed and stored; subsequent runs use the cache |
 | OCR produces garbled text | Increase render scale in `extractTextViaOCR` (`scale: 2.0` → `3.0`) |
-| Module resolution errors | Node.js 18+ required: `node --version` |
+| Module resolution errors | Node.js 20.19+ required: `node --version` |
 
 ## Dependencies
 

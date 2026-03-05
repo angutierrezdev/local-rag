@@ -91,7 +91,8 @@ async function extractTextViaOCR(dataBuffer: Buffer): Promise<string> {
   const pdf = await pdfjsLib.getDocument({ data: pdfData, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise;
 
   console.log(`[OCR] Starting OCR on ${pdf.numPages} pages...`);
-  const worker = await createWorker("eng");
+  const langPath = path.resolve(process.cwd(), "tessdata");
+  const worker = await createWorker("eng", 1, { langPath });
   let fullText = "";
 
   try {
